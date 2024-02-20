@@ -74,10 +74,11 @@ class Player:
 
     def split(self, deck):
         split_hand = Player(name=f"{self.name} (Split)",
-                            balance=self.balance,
+                            balance=0,
                             player_number=self.player_number,
                             origin_player_number=self.player_number or self.origin_player_number)  # Keep original player number if this is already a split hand
         split_hand.place_bet(self.bet)  # Place a bet equal to the original hand.
+        self.balance -= self.bet
         split_hand.cards.append(self.cards.pop())  # Move one card to the split hand.
         self.hit(deck)  # Draw new cards for both hands.
         split_hand.hit(deck)

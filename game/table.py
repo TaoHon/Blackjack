@@ -1,13 +1,13 @@
-import deck
-import player
+from game.deck import Deck
+from game.player import Player
 
 
 class Table:
     def __init__(self, num_players):
-        self.deck = deck.Deck()
+        self.deck = Deck()
         self.deck.shuffle()
-        self.players = [player.Player(f'Player {i}') for i in range(1, num_players + 1)]
-        self.dealer = player.Player()
+        self.players = [Player(f'Player {i}') for i in range(1, num_players + 1)]
+        self.dealer = Player()
 
     def deal_initial_cards(self):
         for _ in range(2):  # Each player, including the dealer, gets two cards initially.
@@ -55,7 +55,7 @@ class Table:
             player.calculate_score()  # Recalculate score after each action
             if player.score == 21:
                 return
-            
+
             actions = ["Hit (h)", "Stand (s)"]
 
             if double_down_allowed:
@@ -116,7 +116,7 @@ class Table:
             print("Dealer busts!")
         else:
             print(f"Dealer stands with score: {self.dealer.score}")
-            
+
     def determine_winners(self):
         dealer_score = self.dealer.score
         dealer_busted = self.dealer.is_busted()
@@ -198,5 +198,3 @@ class Table:
         self.dealer.bet = 0
         self.dealer.insurance_bet = None
         self.dealer.insurance_taken = False
-
-
