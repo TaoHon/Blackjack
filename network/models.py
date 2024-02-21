@@ -9,5 +9,7 @@ class PlayerAction(BaseModel):
 
 class RequestPlayerAction(BaseModel):
     username: str
+    state: str
+    table: list
     available_actions: list
     # Add more fields as needed

@@ -7,16 +7,25 @@ class Player:
     def __init__(self, name='Dealer', balance=0, id=None, origin_player_id=None):
         self.name = name
         self.balance = balance
-        self.insurance_bet = None
         self.cards = []  # List to store the cards in the player's hand.
-        self.bet = 0
         self.score = 0
-        self.insurance_taken = False
-        self.id = Player.id_counter
-        Player.id_counter += 1
+        self.id = id
         self.origin_player_number = origin_player_id  # None for original hands, set for split hands.
-        self.has_bet = False
 
+        self.has_bet = False
+        self.need_action = True
+        self.insurance_taken = False
+        self.insurance_bet = None
+        self.available_actions = []
+        self.bet = 0
+
+    def reset_player(self):
+        self.has_bet = False
+        self.need_action = True
+        self.insurance_taken = False
+        self.insurance_bet = None
+        self.available_actions = []
+        self.bet = 0
 
     def hit(self, deck):
         """Adds a card to the player's hand from the deck."""
@@ -56,6 +65,7 @@ class Player:
         return self.score > 21
 
     def place_bet(self, amount):
+        amount = int(amount)
         self.bet = amount
         self.balance -= amount
 
