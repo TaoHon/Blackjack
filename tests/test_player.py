@@ -71,7 +71,7 @@ class TestPlayer(unittest.TestCase):
         # Setup: Create a player with a hand that can be split and a fake deck.
         cards = [102, 102]  # Two Hearts, assuming 2 as the card value for simplicity.
         deck = FakeDeck(cards + [103, 104])  # Additional cards to draw after splitting.
-        player = Player(name="Test Player", balance=100, player_number=1)
+        player = Player(name="Test Player", balance=100, id=1)
         player.hit(deck)  # Pre-set the player's hand to be splittable.
         player.hit(deck)  # Pre-set the player's hand to be splittable.
         player.place_bet(10)
@@ -87,7 +87,7 @@ class TestPlayer(unittest.TestCase):
         self.assertEqual(split_hand.cards[0], 102, "Split hand's first card should be 102.")
         self.assertIn(split_hand.cards[1], [103, 104], "Split hand's second card should be one of the new cards.")
         self.assertEqual(player.balance, 80, "Player's balance should be adjusted for the bet.")
-        self.assertEqual(player.player_number, split_hand.origin_player_number,
+        self.assertEqual(player.id, split_hand.origin_player_number,
                          "Split hand should retain the origin player number.")
 
     def test_double_down(self):

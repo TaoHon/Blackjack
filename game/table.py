@@ -1,13 +1,30 @@
+import asyncio
 from game.deck import Deck
 from game.player import Player
 
+import game.utils
+import game.player_agent
+import logging
+from game.game_state import GameState
+
 
 class Table:
-    def __init__(self, num_players):
-        self.deck = Deck()
+    def __init__(self, num_seats, num_decks=6):
+        self.logger = logging.getLogger(__name__)
+        self.deck = Deck(num_decks=num_decks)
         self.deck.shuffle()
-        self.players = [Player(f'Player {i}') for i in range(1, num_players + 1)]
+        self.players = []
         self.dealer = Player()
+        self.num_seats = num_seats
+        self.player_agent = game.player_agent.PlayerAgent()
+        self.available_bets = [5, 10, 20, 50, 100]
+        self.state = GameState.WAITING_FOR_PLAYERS  # Initial state
+
+    def get_state(self):
+        return self.state
+    
+    def get_available_bets(self):
+        return self.available_bets
 
     def deal_initial_cards(self):
         for _ in range(2):  # Each player, including the dealer, gets two cards initially.
@@ -16,15 +33,82 @@ class Table:
         if self.deck.check_for_plastic_card():
             self.reshuffle_deck()
 
+    def transition_state(self, new_state):
+        """Transition to a new state and call the corresponding method."""
+        self.state = new_state
+        if new_state == GameState.WAITING_FOR_PLAYERS:
+            self.wait_for_players()
+        elif new_state == GameState.BETTING:
+            self.handle_bets()
+        elif new_state == GameState.DEALING_INITIAL_CARDS:
+            self.deal_initial_cards()
+        elif new_state == GameState.PLAYER_TURNS:
+            for player in self.players:
+                self.player_turn(player)
+        elif new_state == GameState.DEALER_TURN:
+            self.dealer_turn()
+        elif new_state == GameState.DETERMINE_WINNERS:
+            self.determine_winners()
+        elif new_state == GameState.RESHUFFLE:
+            self.reshuffle_deck()
+        elif new_state == GameState.ROUND_END:
+            self.cleanup_after_round()
+
+        self.logger(f"Transitioned to {self.state}")
+
+
+    def add_player(self, player):
+        if len(self.players) >= self.num_seats:
+            logging.info(f"{player.name} cannot join the game. Table is full.")
+            return False
+        self.players.append(player)
+        return True
+
+    def remove_player(self, player):
+        self.players.remove(player)
+
+    def get_player(self, player_id):
+        for player in self.players:
+            if player.id == player_id:
+                return player
+        return None
+
+    async def wait_for_players(self):
+        # If not enough players have joined, wait a bit before trying again
+        if len(self.players) < self.num_seats:
+            await asyncio.sleep(0.01)  # Wait for 0.01 second
+        else:
+            self.transition_state(GameState.BETTING)
+
+    # def handle_bets(self):
+    #     for player in self.players:
+    #         while True:
+    #             try:
+    #                 bet_amount = self.player_agent.place_bets(player, self.available_bets)
+    #                 player.place_bet(bet_amount)
+    #                 break
+    #             except ValueError:
+    #                 print("Please enter a valid number.")
+
+    async def handle_bets(self):
+        while not all(player.has_bet for player in self.players):
+            await asyncio.sleep(0.01)  # Wait for 1 second before checking again
+
+    def place_bet(self, player_id, bet_amount):
+        player = self.get_player(player_id)
+        if player:
+            player.place_bet(bet_amount)
+            return True
+        else:
+            self.logger.error(f"Player with id {player_id} not found.")
+        return False
+
     def reshuffle_deck(self):
         # Check for reshuffle if the plastic card was drawn
         print("Time to reshuffle the deck.")
         self.deck.shuffle()
 
     def play_round(self):
-        if len(self.deck.cards) < 20:  # Check if there are enough cards to play
-            self.deck.shuffle()  # Reshuffle if the deck is low
-
         self.handle_bets()  # Handle initial betting
         self.deal_initial_cards()
 
@@ -48,7 +132,8 @@ class Table:
         insurance_allowed = self.dealer.cards[0] % 100 == 1  # Dealer's face-up card is an Ace.
 
         while True:
-            print(f"{player.name}'s turn. Current hand: {player.display_hand()}")
+            self.print_table_state(hidden_card=True)
+
             print(f"Current score: {player.score}")
 
             # Check for Blackjack
@@ -65,8 +150,9 @@ class Table:
             if insurance_allowed and not player.insurance_taken:  # Assuming a flag to track if insurance is taken
                 actions.append("Insurance (i)")
 
-            action_str = ", ".join(actions)
-            player_action = input(f"Choose an action: {action_str}: ").lower()
+            available_actions = ", ".join(actions)
+            player_action = self.player_agent.request_action(self.get_table_state_array(hidden_card=True),
+                                                             available_actions, player)
 
             if player_action == 'h':
                 player.hit(self.deck)
@@ -109,9 +195,6 @@ class Table:
             self.dealer.hit(self.deck)
             self.dealer.calculate_score()
 
-        # Reveal hole card and final score
-        print(f"Dealer's final hand: {self.dealer.display_hand()}, score: {self.dealer.score}")
-
         if self.dealer.is_busted():
             print("Dealer busts!")
         else:
@@ -121,11 +204,10 @@ class Table:
         dealer_score = self.dealer.score
         dealer_busted = self.dealer.is_busted()
         dealer_has_blackjack = dealer_score == 21 and len(self.dealer.cards) == 2
-        print(f"Dealer's final hand: {self.dealer.display_hand()}, score: {dealer_score}")
+        self.print_table_state()
 
         for player in self.players:
             player_score = player.score
-            print(f"\n{player.name}'s final hand: {player.display_hand()}, score: {player_score}")
 
             # Check for insurance payout
             if dealer_has_blackjack and player.insurance_taken:
@@ -161,19 +243,10 @@ class Table:
         # This method would search for the original player based on the origin_player_number.
         # Assuming player_number is unique and correctly managed.
         for player in self.players:
-            if player.player_number == split_player.origin_player_number:
+            if player.id == split_player.origin_player_number:
                 return player
         return None
 
-    def handle_bets(self):
-        for player in self.players:
-            while True:
-                try:
-                    bet_amount = int(input(f"{player.name}, place your bet: "))
-                    player.place_bet(bet_amount)
-                    break
-                except ValueError:
-                    print("Please enter a valid number.")
 
     def check_continue_playing(self):
         for player in list(self.players):  # Iterate over a copy of the list to allow modification.
@@ -198,3 +271,34 @@ class Table:
         self.dealer.bet = 0
         self.dealer.insurance_bet = None
         self.dealer.insurance_taken = False
+
+    def get_table_state_array(self, hidden_card=False):
+        # Initialize the table state with the dealer's hand
+        # For the dealer's hidden card, you can use None or a specific value
+        if hidden_card:
+            table_state = [900] + [self.dealer.cards[0], 888] + self.dealer.cards[2:]
+        else:
+            table_state = [900] + self.dealer.cards
+        # Append each player's hand to the state, separated by 900 + player number
+        for player in self.players:
+            player_state = [900 + player.id] + player.cards
+            table_state.extend(player_state)
+        return table_state
+
+    def print_table_state(self, hidden_card=False):
+        table_state_array = self.get_table_state_array(hidden_card=hidden_card)
+        # Convert card codes back to human-readable format or use directly if they're already in that format
+        readable_state = []
+        for item in table_state_array:
+            if int(item / 100) == 9:
+                readable_state.append('----')  # Separator between hands
+                if item == 900:
+                    readable_state.append("Dealer's hand:")
+                else:
+                    readable_state.append(f"{self.get_player(player_number=item % 9).name}'s hand:")
+            elif isinstance(item, int):
+                # Here, convert card codes to human-readable format, e.g., 102 -> 'Heart 2'
+                readable_state.append(game.utils.convert_card_code(item))
+            else:
+                readable_state.append(item)  # Player names and dealer label
+        print('\n'.join(readable_state))
