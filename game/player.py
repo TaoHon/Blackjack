@@ -1,10 +1,13 @@
+from asyncio import Event
+
+from fastapi import WebSocket
 import game.utils
 
 
 class Player:
     id_counter = 0
 
-    def __init__(self, name='Dealer', balance=0, id=None, origin_player_id=None):
+    def __init__(self, name='Dealer', balance=0, id=None, origin_player_id=None, websocket: WebSocket = None):
         self.name = name
         self.balance = balance
         self.cards = []  # List to store the cards in the player's hand.
@@ -17,7 +20,10 @@ class Player:
         self.insurance_taken = False
         self.insurance_bet = None
         self.available_actions = []
-        self.bet = 0
+        self.bet = None
+        self.websocket = websocket
+
+        self.turn_event = Event()
 
     def reset_player(self):
         self.has_bet = False
@@ -26,6 +32,7 @@ class Player:
         self.insurance_bet = None
         self.available_actions = []
         self.bet = 0
+        self.websocket = None
 
     def hit(self, deck):
         """Adds a card to the player's hand from the deck."""

@@ -21,10 +21,16 @@ def convert_card_code(card):
     return (f"{suit}{face_value}")
 
 
-def convert_actions(input_list):
-    output_list = []
-    for s in input_list:
-        match = re.search(r'\((.)\)', s)
-        if match:
-            output_list.append(match.group(1))
-    return output_list
+def convert_actions(actions):
+    # Define a dictionary to map full actions to their codes
+    action_codes = {
+        "Hit (h)": "h",
+        "Stand (s)": "s",
+        "Double Down (d)": "d",
+        "Split (p)": "p"
+    }
+
+    # Use list comprehension to convert each action in the list to its code
+    converted_actions = [action_codes[action] for action in actions]
+
+    return converted_actions

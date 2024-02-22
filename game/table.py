@@ -1,3 +1,5 @@
+import asyncio
+
 from game.deck import Deck
 from game.player import Player
 
@@ -5,6 +7,7 @@ import game.utils
 import game.player_agent
 import logging
 from game.game_state import GameState
+from asyncio import Event
 
 
 class Table:
@@ -19,6 +22,11 @@ class Table:
         self.player_agent = game.player_agent.PlayerAgent()
         self.available_bets = [0, 5, 10, 20, 50, 100]
         self.state = GameState.WAITING_FOR_PLAYERS_TO_JOIN  # Initial state
+        self.available_seats = list(range(1, num_seats + 1))  # create a list of available seats
+        self.seats = {}  # create a dictionary to keep track of the seats
+        self.waiting_players_to_join = Event()
+        self.betting_event = Event()
+        self.player_ready_status = {}
 
     def get_state(self):
         return self.state
@@ -35,18 +43,29 @@ class Table:
 
         self.transition_state(GameState.PLAYER_TURNS)
 
+    def get_seat_number(self, player_id):
+        for seat, id in self.seats.items():
+            if id == player_id:
+                return seat
+        return None
+
     def transition_state(self, new_state):
         """Transition to a new state and call the corresponding method."""
         self.state = new_state
+        self.logger.info(f"Transitioned to {self.state}")
         if new_state == GameState.WAITING_FOR_PLAYERS_TO_JOIN:
-            pass
+            self.waiting_players_to_join.clear()
         elif new_state == GameState.BETTING:
-            pass
+            self.waiting_players_to_join.set()
+            self.betting_event.clear()
         elif new_state == GameState.DEALING_INITIAL_CARDS:
+            self.betting_event.set()
             self.deal_initial_cards()
         elif new_state == GameState.PLAYER_TURNS:
             for player in self.players:
+                player.turn_event.clear()
                 self.player_turn(player)
+                player.turn_event.set()
         elif new_state == GameState.AWAITING_PLAYER_ACTION:
             pass
         elif new_state == GameState.DEALER_TURN:
@@ -58,37 +77,69 @@ class Table:
         elif new_state == GameState.ROUND_END:
             self.cleanup_after_round()
 
-        self.logger.info(f"Transitioned to {self.state}")
 
     def get_available_seats(self) -> int:
         available_seats = self.num_seats - len(self.players)
         return available_seats
 
     def add_player(self, player):
-        if len(self.players) >= self.num_seats:
+        if not self.available_seats:
             logging.info(f"{player.name} cannot join the game. Table is full.")
             return False
-        else:
-            self.logger.info(f"Adding player {player.name}, there are {self.get_available_seats() - 1} seats left.")
+        elif not self.player_exists(player.name):
+            seat = self.available_seats.pop(0)
+            self.seats[seat] = player.id  # assign seat to player
+            self.logger.info(f"Adding {player.name} to seat {seat}, there are {len(self.available_seats)} seats left.")
             self.players.append(player)
 
-            if self.get_available_seats() == 0:
+            if not self.available_seats:
+                self.player_ready_status = {player.id: asyncio.Future() for player in self.players}
                 self.logger.info(f"No more seats left to join the game. Table is full.")
                 self.logger.info(f"Game will start soon.")
                 self.transition_state(GameState.BETTING)
+
         return True
 
     def remove_player(self, player):
+        seat_to_remove = None
+        for seat, player_name in self.seats.items():
+            if player_name == player.name:
+                seat_to_remove = seat
+                break
+
+        if seat_to_remove is not None:
+            self.available_seats.insert(0, seat_to_remove)  # make the seat available again (adding at front to keep original order)
+            self.available_seats.sort()  # sort the seats in ascending order
+            del self.seats[seat_to_remove]  # remove player from seats dictionary
+
         self.players.remove(player)
 
-    def get_player(self, player_id):
+    def player_exists(self, player_id: str):
+        for player in self.players:
+            if player.id == player_id:
+                return True
+        return False
+
+    def get_player_via_id(self, player_id):
         for player in self.players:
             if player.id == player_id:
                 return player
         return None
 
+    def get_player_with_no_bet(self):
+        for player in self.players:
+            if player.bet is None:
+                return player
+        return None
+
+    def get_player_via_seat(self, seat_number):
+        for seat, player_id in self.seats.items():
+            if seat == seat_number:
+                return self.get_player_via_id(player_id)
+        return None
+
     def place_bet(self, player_id, bet_amount):
-        player = self.get_player(player_id)
+        player = self.get_player_via_id(player_id)
         if player:
             self.logger.info(f"Player {player.name}, bet amount: {bet_amount}")
             player.place_bet(bet_amount)
@@ -127,21 +178,11 @@ class Table:
             self.reshuffle_deck()
 
     def player_turn(self, player):
-        if not player.need_action:
-            return
-
         double_down_allowed = False  # Assuming double down is allowed only on the initial hand.
         split_allowed = len(player.cards) == 2 and player.cards[0] % 100 == player.cards[1] % 100
         insurance_allowed = self.dealer.cards[0] % 100 == 1  # Dealer's face-up card is an Ace.
 
-        self.print_table_state(hidden_card=True)
-
         self.logger.info(f"Current score: {player.score}")
-
-        # Check for Blackjack
-        player.calculate_score()  # Recalculate score after each action
-        if player.score == 21:
-            return
 
         actions = ["Hit (h)", "Stand (s)"]
 
@@ -152,10 +193,15 @@ class Table:
         if insurance_allowed and not player.insurance_taken:  # Assuming a flag to track if insurance is taken
             actions.append("Insurance (i)")
 
-        available_actions = ", ".join(actions)
-        player.available_actions = game.utils.convert_actions(available_actions)
+        # Check for Blackjack
+        player.calculate_score()  # Recalculate score after each action
+        if player.score == 21:
+            actions = ["Stand (s)"]
+
+        player.available_actions = game.utils.convert_actions(actions)
 
         self.transition_state(GameState.AWAITING_PLAYER_ACTION)
+        self.player_ready_status[player.id].set_result(True)  # Notify the system that player is ready
 
     def handle_action(self, player_action, player):
         double_down_allowed = False  # Assuming double down is allowed only on the initial hand.
@@ -165,10 +211,8 @@ class Table:
             print(f"New card added: {player.cards[-1]}")
             self.transition_state(GameState.PLAYER_TURNS)
             if player.is_busted():
-                player.need_action = False
                 print(f"{player.name} has busted!")
         elif player_action == 's':
-            player.need_action = False
             print(f"{player.name} stands.")
         elif player_action == 'd' and double_down_allowed:
             if player.double_down(self.deck):  # Assuming this method returns False if not allowed or fails
@@ -176,8 +220,6 @@ class Table:
                 print(f"New card: {player.cards[-1]}, New score: {player.score}")
             else:
                 print("Cannot double down.")
-                player.need_action = False
-            player.need_action = False
 
         elif player_action == 'p':
             # Split logic here; would require managing additional hand
@@ -190,10 +232,10 @@ class Table:
             player.take_insurance(insurance_bet)  # Deduct the insurance bet from the player's balance.
             player.insurance_taken = True
             print(f"Insurance bet of {insurance_bet} taken.")
-            player.need_action = False
+            player.turn_event.clear()
         else:
             print("Invalid action or not allowed at this time.")
-            player.need_action = False
+            player.turn_event.clear()
 
         player.calculate_score()  # Recalculate score after each action
 
@@ -290,7 +332,7 @@ class Table:
             table_state = [900] + self.dealer.cards
         # Append each player's hand to the state, separated by 900 + player number
         for player in self.players:
-            player_state = [900 + player.id] + player.cards
+            player_state = [900 + self.get_seat_number(player.id)] + player.cards
             table_state.extend(player_state)
         return table_state
 
@@ -304,7 +346,7 @@ class Table:
                 if item == 900:
                     readable_state.append("Dealer's hand:")
                 else:
-                    readable_state.append(f"{self.get_player(player_number=item % 9).name}'s hand:")
+                    readable_state.append(f"{self.get_player_via_seat(seat_number=item % 9).name}'s hand:")
             elif isinstance(item, int):
                 # Here, convert card codes to human-readable format, e.g., 102 -> 'Heart 2'
                 readable_state.append(game.utils.convert_card_code(item))
