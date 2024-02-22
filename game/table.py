@@ -26,7 +26,7 @@ class Table:
         self.seats = {}  # create a dictionary to keep track of the seats
         self.waiting_players_to_join = Event()
         self.betting_event = Event()
-        self.player_ready_status = {}
+        self.player_ready_status = {player.id: asyncio.Future() for player in self.players}
 
     def get_state(self):
         return self.state
@@ -63,9 +63,8 @@ class Table:
             self.deal_initial_cards()
         elif new_state == GameState.PLAYER_TURNS:
             for player in self.players:
-                player.turn_event.clear()
+                self.player_ready_status[player.id].set_result(False)
                 self.player_turn(player)
-                player.turn_event.set()
         elif new_state == GameState.AWAITING_PLAYER_ACTION:
             pass
         elif new_state == GameState.DEALER_TURN:
@@ -178,6 +177,9 @@ class Table:
             self.reshuffle_deck()
 
     def player_turn(self, player):
+        # Set all status to False
+
+
         double_down_allowed = False  # Assuming double down is allowed only on the initial hand.
         split_allowed = len(player.cards) == 2 and player.cards[0] % 100 == player.cards[1] % 100
         insurance_allowed = self.dealer.cards[0] % 100 == 1  # Dealer's face-up card is an Ace.
