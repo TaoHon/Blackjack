@@ -13,7 +13,7 @@ from asyncio import Event
 class Table:
     def __init__(self, num_seats, num_decks=6):
         self.logger = logging.getLogger(__name__)
-        self.logger.setLevel(logging.INFO)
+        self.logger.setLevel(logging.DEBUG)
         self.deck = Deck(num_decks=num_decks)
         self.deck.shuffle()
         self.players = []
@@ -74,8 +74,11 @@ class Table:
         elif new_state == GameState.PLAYER_TURNS:
             self.clear_all_player_events()
             next_player = self.next_player_turn()
-            self.player_events[next_player.id].set()
-            self.player_turn(next_player)
+            if next_player is not None:
+                self.player_events[next_player.id].set()
+                self.player_turn(next_player)
+            else:
+                self.transition_state(GameState.DEALER_TURN)
 
         elif new_state == GameState.AWAITING_PLAYER_ACTION:
             pass
@@ -89,8 +92,10 @@ class Table:
             self.cleanup_after_round()
 
     def next_player_turn(self):
+        self.logger.debug(f"getting the next player")
         for player in self.players:
             if player.state == PlayerState.AWAITING_MY_TURN:
+                self.logger.debug(f"Now it is {player.name}'s turn")
                 return player
         return None
 
@@ -125,7 +130,8 @@ class Table:
 
         if seat_to_remove is not None:
             self.available_seats.insert(0,
-                                        seat_to_remove)  # make the seat available again (adding at front to keep original order)
+                                        seat_to_remove)
+            # make the seat available again (adding at front to keep original order)
             self.available_seats.sort()  # sort the seats in ascending order
             del self.seats[seat_to_remove]  # remove player from seats dictionary
 
@@ -229,8 +235,11 @@ class Table:
             self.transition_state(GameState.PLAYER_TURNS)
             if player.is_busted():
                 print(f"{player.name} has busted!")
+                player.busted()
+
         elif player_action == 's':
             player.stand()
+            self.transition_state(GameState.PLAYER_TURNS)
         elif player_action == 'd' and double_down_allowed:
             if player.double_down(self.deck):  # Assuming this method returns False if not allowed or fails
                 print("Doubled down and drew one card.")
@@ -267,6 +276,8 @@ class Table:
             print("Dealer busts!")
         else:
             print(f"Dealer stands with score: {self.dealer.score}")
+
+        self.transition_state(GameState.DETERMINE_WINNERS)
 
     def determine_winners(self):
         dealer_score = self.dealer.score

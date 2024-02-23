@@ -109,3 +109,7 @@ class Player:
     def stand(self):
         print(f"{self.name} stands.")
         self.transition_state(PlayerState.HAS_ACTED)
+
+    def busted(self):
+        print(f"{self.name} has busted.")
+        self.transition_state(PlayerState.HAS_ACTED)
