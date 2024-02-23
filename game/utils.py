@@ -27,7 +27,8 @@ def convert_actions(actions):
         "Hit (h)": "h",
         "Stand (s)": "s",
         "Double Down (d)": "d",
-        "Split (p)": "p"
+        "Split (p)": "p",
+        "Insurance (i)": "i"
     }
 
     # Use list comprehension to convert each action in the list to its code

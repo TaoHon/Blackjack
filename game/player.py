@@ -1,13 +1,14 @@
-from asyncio import Event
-
+import logging
 from fastapi import WebSocket
 import game.utils
+from game.state import PlayerState
 
 
 class Player:
     id_counter = 0
 
     def __init__(self, name='Dealer', balance=0, id=None, origin_player_id=None, websocket: WebSocket = None):
+        self.state = PlayerState.WAITING_FOR_BET
         self.name = name
         self.balance = balance
         self.cards = []  # List to store the cards in the player's hand.
@@ -15,19 +16,23 @@ class Player:
         self.id = id
         self.origin_player_number = origin_player_id  # None for original hands, set for split hands.
 
-        self.has_bet = False
-        self.need_action = True
         self.insurance_taken = False
         self.insurance_bet = None
         self.available_actions = []
         self.bet = None
         self.websocket = websocket
 
-        self.turn_event = Event()
+        self.logger = logging.getLogger(__name__)
+        self.logger.setLevel(logging.INFO)
+
+    def transition_state(self, new_state):
+        """Transition to a new state and call the corresponding method."""
+        self.state = new_state
+        self.logger.info(f"Player {self.name} transitioned to {self.state}")
+        if new_state == PlayerState.HAS_BET:
+            self.transition_state(PlayerState.AWAITING_MY_TURN)
 
     def reset_player(self):
-        self.has_bet = False
-        self.need_action = True
         self.insurance_taken = False
         self.insurance_bet = None
         self.available_actions = []
@@ -75,6 +80,7 @@ class Player:
         amount = int(amount)
         self.bet = amount
         self.balance -= amount
+        self.transition_state(PlayerState.HAS_BET)
 
     def double_down(self, deck):
         if len(self.cards) == 2:
@@ -99,3 +105,7 @@ class Player:
 
     def take_insurance(self, insurance_bet):
         self.insurance_bet = insurance_bet
+
+    def stand(self):
+        print(f"{self.name} stands.")
+        self.transition_state(PlayerState.HAS_ACTED)
