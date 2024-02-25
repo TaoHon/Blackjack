@@ -63,24 +63,24 @@ async def handle_betting_state(player, game_manager, connection_manager, event_h
     logger.info(f'Client {player.name} has entered the BETTING state')
     logger.info(f'Client {player.name} player.state has {player.state} state')
     available_bets = game_manager.get_available_bets()
-    if player.state == PlayerState.WAIT_FOR_BET:
-        logger.info(f'Client {player.name} player.state has {player.state} state')
-        request_action = RequestPlayerAction(username=player.name, state=game_state_machine.get_state(),
-                                             table=[],
-                                             available_actions=available_bets)
-        await connection_manager.send_personal_message(request_action.model_dump_json(), websocket)
-        data = await websocket.receive_text()
-        logger.info(f"Processing player action {data}")
-        if game_state_machine.get_state() == 'betting':
-            try:
-                json_data = PlayerAction.model_validate_json(data)
-                game_manager.place_bet(player.id, json_data.action)
-            except ValidationError as e:
-                await connection_manager.send_personal_message(f"Invalid data: {e}", websocket)
-                logger.info(f"Current state is {game_state_machine.get_state()}")
-            pass
 
-        await event_handler.bet_finished.wait()
+    logger.info(f'Client {player.name} player.state has {player.state} state')
+    request_action = RequestPlayerAction(username=player.name, state=game_state_machine.get_state(),
+                                         table=[],
+                                         available_actions=available_bets)
+    await connection_manager.send_personal_message(request_action.model_dump_json(), websocket)
+    data = await websocket.receive_text()
+    logger.info(f"Processing player action {data}")
+    if game_state_machine.get_state() == 'betting':
+        try:
+            json_data = PlayerAction.model_validate_json(data)
+            game_manager.place_bet(player.id, json_data.action)
+        except ValidationError as e:
+            await connection_manager.send_personal_message(f"Invalid data: {e}", websocket)
+            logger.info(f"Current state is {game_state_machine.get_state()}")
+        pass
+
+    await event_handler.bet_finished.wait()
 
 
 async def handle_player_turn_state(player, game_manager, connection_manager, websocket, game_state_machine, client_id):

@@ -81,5 +81,10 @@ class EventHandler:
         self.wait_for_new_round.clear()
 
     def handle_all_players_skipped(self):
+        # self.ready_to_start.clear()
         self.bet_finished.set()
         self.cleanup_after_round()
+
+        # self.ready_to_start.set()
+
+        return
