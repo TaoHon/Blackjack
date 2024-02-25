@@ -35,6 +35,7 @@ class EventHandler:
         self.logger.info("Starting betting")
 
     def start_dealing_cards(self):
+        self.logger.debug("bet_finished.set()")
         self.bet_finished.set()
         self.game_manager.deal_initial_cards()
         self.event_bus.publish('cards_dealing_done')
@@ -71,20 +72,25 @@ class EventHandler:
 
     def cleanup_after_round(self):
         self.logger.debug("cleanup_after_round")
+        self.logger.debug("bet_finished.set()")
         self.bet_finished.clear()
         self.game_manager.player_manager.clear_all_player_events()
         self.game_manager.player_manager.reset_all_players()
 
+        self.logger.debug("wait_for_new_round.set()")
         self.wait_for_new_round.set()
         self.game_manager.cleanup_after_round()
         self.event_bus.publish('cleanup_done')
+        self.logger.debug("wait_for_new_round.clear()")
         self.wait_for_new_round.clear()
 
     def handle_all_players_skipped(self):
-        # self.ready_to_start.clear()
-        self.bet_finished.set()
         self.cleanup_after_round()
-
-        # self.ready_to_start.set()
+        self.logger.debug("wait_for_new_round.set()")
+        self.wait_for_new_round.set()
+        self.logger.debug("ready_to_start.set()")
+        self.ready_to_start.set()
+        self.logger.debug("bet_finished.set()")
+        self.bet_finished.set()
 
         return

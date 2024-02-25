@@ -42,6 +42,7 @@ class GameManager:
         if player:
             self.logger.info(f"Player {player.name}, bet amount: {bet_amount}")
             player.place_bet(bet_amount)
+            self.dealer.balance += int(bet_amount)
             # Check all players have placed a bet
             if self.all_player_skipping_the_round():
                 self.logger.info("All players skipping their round.")
@@ -113,6 +114,7 @@ class GameManager:
 
         elif player_action == 'i' and insurance_allowed and not player.insurance_taken:
             insurance_bet = player.bet / 2
+            self.dealer.balance += insurance_bet
             player.take_insurance(insurance_bet)  # Deduct the insurance bet from the player's balance.
             player.insurance_taken = True
 
@@ -140,16 +142,21 @@ class GameManager:
             # Check for insurance payout
             if dealer_has_blackjack and player.insurance_taken:
                 player.balance += player.insurance_bet * 3  # Insurance bet pays 2:1.
+                self.dealer.balance -= player.insurance_bet * 3
 
             elif dealer_busted or (player_score > dealer_score and not dealer_has_blackjack):
                 # Check if this is a split hand and add winnings to the original player if so
                 target_player = self.find_original_player(player) if player.origin_player_number else player
                 self.logger.debug(f"Player {player.name} has bet {player.bet}")
                 target_player.balance += player.bet * 2  # Payout for win
+                self.dealer.balance -= player.bet * 2
+
                 if player_score == 21 and len(player.cards) == 2:  # Check for Blackjack
                     target_player.balance += player.bet * 0.5  # Additional payout for Blackjack.
+                    self.dealer.balance -= player.bet * 0.5
             elif player_score == dealer_score and not dealer_has_blackjack:
                 player.balance += player.bet  # Return the player's bet
+                self.dealer.balance -= player.bet
 
             print(f"Round: {self.round_counter} Player {player.name} balance: {player.balance}")
 
