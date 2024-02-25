@@ -12,7 +12,7 @@ event_bus = EventBus()
 
 logger = utils.log_setup.setup_logger(log_level=logging.DEBUG, name=__name__)
 
-player_manager = PlayerManager(num_seats=1, event_bus=event_bus, logger=logger)
+player_manager = PlayerManager(num_seats=7, event_bus=event_bus, logger=logger)
 
 game_state_machine = GameStateMachine(event_bus=event_bus, logger=logger)
 

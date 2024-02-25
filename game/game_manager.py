@@ -62,15 +62,12 @@ class GameManager:
         self.deck.shuffle_if_needed()
 
     def player_turn(self, player):
-        double_down_allowed = False  # Assuming double down is allowed only on the initial hand.
-        # split_allowed = len(player.cards) == 2 and player.cards[0] % 100 == player.cards[1] % 100
-        split_allowed = False
-        # insurance_allowed = self.dealer.cards[0] % 100 == 1  # Dealer's face-up card is an Ace.
-        insurance_allowed = False
+        double_down_allowed = (len(player.cards) == 2)  # Assuming double down is allowed only on the initial hand.
+        split_allowed = len(player.cards) == 2 and player.cards[0] % 100 == player.cards[1] % 100
+        insurance_allowed = self.dealer.cards[0] % 100 == 1  # Dealer's face-up card is an Ace.
         self.logger.info(f"Current score: {player.score}")
 
         actions = ["Hit (h)", "Stand (s)"]
-
         if double_down_allowed:
             actions.append("Double Down (d)")
         if split_allowed:
@@ -81,14 +78,16 @@ class GameManager:
         # Check for Blackjack
         player.calculate_score()  # Recalculate score after each action
         if player.score == 21:
+            player.has_black_jack = True
+            actions = ["Stand (s)"]
+
+        if player.has_double_down:
             actions = ["Stand (s)"]
 
         player.available_actions = game.utils.convert_actions(actions)
 
     def handle_action(self, player_action, player):
-        double_down_allowed = False  # Assuming double down is allowed only on the initial hand.
-        # insurance_allowed = self.dealer.cards[0] % 100 == 1  # Dealer's face-up card is an Ace.
-        insurance_allowed = False
+        insurance_allowed = self.dealer.cards[0] % 100 == 1  # Dealer's face-up card is an Ace.
 
         if player_action == 'h':
             player.hit(self.deck)
@@ -100,16 +99,20 @@ class GameManager:
         elif player_action == 's':
             player.stand()
             self.logger.debug(f"player {player.name} stand")
-        # elif player_action == 'd' and double_down_allowed:
-        #     if player.double_down(self.deck):  # Assuming this method returns False if not allowed or fails
-        #         print(f"New card: {player.cards[-1]}, New score: {player.score}")
-        #     else:
-        #         print("Cannot double down.")
+
+        elif player_action == 'd':
+            self.dealer.balance += player.bet
+            player.has_double_down = True
+
+            if player.double_down(self.deck):  # Assuming this method returns False if not allowed or fails
+                self.logger.info(f"New card: {player.cards[-1]}, New score: {player.score}")
+            else:
+                self.logger.info("Cannot double down.")
 
         elif player_action == 'p':
             # Split logic here; would require managing additional hand
             split_player = player.split(self.deck)
-            self.players.append(split_player)
+            self.player_manager.insert_split_player(player, split_player)
             self.logger.debug(f"player {player.name} split")
 
         elif player_action == 'i' and insurance_allowed and not player.insurance_taken:
@@ -134,13 +137,13 @@ class GameManager:
         dealer_score = self.dealer.score
         dealer_busted = self.dealer.is_busted()
         dealer_has_blackjack = dealer_score == 21 and len(self.dealer.cards) == 2
-        # self.print_table_state()
 
         for player in self.player_manager.players:
             player_score = player.score
-
+            if player.is_busted():
+                pass
             # Check for insurance payout
-            if dealer_has_blackjack and player.insurance_taken:
+            elif dealer_has_blackjack and player.insurance_taken:
                 player.balance += player.insurance_bet * 3  # Insurance bet pays 2:1.
                 self.dealer.balance -= player.insurance_bet * 3
 
@@ -151,7 +154,7 @@ class GameManager:
                 target_player.balance += player.bet * 2  # Payout for win
                 self.dealer.balance -= player.bet * 2
 
-                if player_score == 21 and len(player.cards) == 2:  # Check for Blackjack
+                if target_player.has_black_jack:  # Check for Blackjack
                     target_player.balance += player.bet * 0.5  # Additional payout for Blackjack.
                     self.dealer.balance -= player.bet * 0.5
             elif player_score == dealer_score and not dealer_has_blackjack:
@@ -160,7 +163,10 @@ class GameManager:
 
             print(f"Round: {self.round_counter} Player {player.name} balance: {player.balance}")
 
+        self.player_manager.remove_split_player()
+
         print(f"Round: {self.round_counter} Dealer {self.dealer.name} balance: {self.dealer.balance}")
+        # self.print_table_state()
 
     def find_original_player(self, split_player):
         # This method would search for the original player based on the origin_player_number.
@@ -173,13 +179,7 @@ class GameManager:
     def cleanup_after_round(self):
         self.logger.info("Cleaning up")
         # Filter out split hands from the list of active players.
-        self.player_manager.players = [player for player in self.player_manager.players if
-                                       player.origin_player_number is None]
-
-        # reset each remaining player's state as needed for the next round.
-        for player in self.player_manager.players:
-            player.reset()
-
+        self.player_manager.reset_players()
         self.dealer.reset()
         self.round_counter = self.round_counter + 1
         self.logger.info("Cleaning up done")

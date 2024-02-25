@@ -36,8 +36,8 @@ async def websocket_endpoint(websocket: WebSocket, client_name: str,
 
     try:
         while True:
-            logger.info(f"Game state {game_state_machine.get_state()}")
-            logger.info(f'Client {player.name} player.state has {player.state} state')
+            # logger.debug(f"Game state {game_state_machine.get_state()}")
+            # logger.debug(f'Client {player.name} player.state has {player.state} state')
 
             if game_state_machine.get_state() == 'betting':
                 await handle_betting_state(player, game_manager, connection_manager, event_handler, websocket,
@@ -60,8 +60,6 @@ async def websocket_endpoint(websocket: WebSocket, client_name: str,
 
 
 async def handle_betting_state(player, game_manager, connection_manager, event_handler, websocket, game_state_machine):
-    logger.info(f'Client {player.name} has entered the BETTING state')
-    logger.info(f'Client {player.name} player.state has {player.state} state')
     available_bets = game_manager.get_available_bets()
 
     logger.info(f'Client {player.name} player.state has {player.state} state')

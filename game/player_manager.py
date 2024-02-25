@@ -77,23 +77,6 @@ class PlayerManager:
                 return self.get_player_via_id(player_id)
         return None
 
-    def remove_player(self, player):
-        seat_to_remove = None
-        for seat, player_name in self.seats.items():
-            if player_name == player.name:
-                seat_to_remove = seat
-                break
-
-        if seat_to_remove is not None:
-            self.available_seats.insert(0,
-                                        seat_to_remove)
-            # make the seat available again (adding at front to keep original order)
-            self.available_seats.sort()  # sort the seats in ascending order
-            del self.seats[seat_to_remove]  # remove player from seats dictionary
-
-        self.player_events.pop(player.id, None)
-        self.players.remove(player)
-
     def get_current_turn_player(self):
         self.logger.debug(f"getting the player for this turn")
         for player in self.players:
@@ -134,3 +117,20 @@ class PlayerManager:
     def reset_all_players(self):
         for player in self.players:
             player.reset()
+
+    def insert_split_player(self, original_player, split_player):
+        try:
+            original_player_position = self.players.index(original_player)
+        except ValueError:
+            self.logger.debug("Player not in list")
+            return
+        self.players.insert(original_player_position + 1, split_player)
+
+    def reset_players(self):
+        # reset each remaining player's state as needed for the next round.
+        for player in self.players:
+            player.reset()
+
+    def remove_split_player(self):
+        self.players = [player for player in self.players if
+                        player.origin_player_number is None]

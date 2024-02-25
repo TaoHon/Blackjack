@@ -25,6 +25,8 @@ class Player:
         self.available_actions = []
         self.bet = None
         self.websocket = websocket
+        self.has_black_jack = False
+        self.has_double_down = False
 
         self.logger = utils.log_setup.setup_logger(name=__name__)
 
@@ -44,6 +46,9 @@ class Player:
         self.cards = []
         self.score = 0
         self.transition_state(PlayerState.WAIT_FOR_BET)
+
+        self.has_black_jack = False
+        self.has_double_down = False
 
     def hit(self, deck):
         """Adds a card to the player's hand from the deck."""
@@ -92,10 +97,12 @@ class Player:
             self.transition_state(PlayerState.HAS_BET)
 
     def double_down(self, deck):
+
         if len(self.cards) == 2:
-            self.place_bet(self.bet)  # Double the bet.
+            self.balance -= self.bet
+            self.bet += self.bet
             self.hit(deck)
-            self.display_hand()
+            # self.display_hand()
 
     def split(self, deck):
         self.logger.info(f'player {self.name} split')
@@ -103,8 +110,10 @@ class Player:
                             balance=0,
                             id=self.id,
                             origin_player_id=self.id or self.origin_player_number)  # Keep original player number if this is already a split hand
-        split_hand.place_bet(self.bet)  # Place a bet equal to the original hand.
+        # Place a bet equal to the original hand.
         self.balance -= self.bet
+        split_hand.bet = self.bet
+        self.bet += self.bet
         split_hand.cards.append(self.cards.pop())  # Move one card to the split hand.
         self.hit(deck)  # Draw new cards for both hands.
         split_hand.hit(deck)
