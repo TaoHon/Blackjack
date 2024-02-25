@@ -6,6 +6,7 @@ class PlayerAction(BaseModel):
     action: str
     # Add more fields as needed
 
+
 class RequestPlayerAction(BaseModel):
     username: str
     state: str

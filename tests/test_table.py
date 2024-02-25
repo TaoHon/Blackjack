@@ -1,16 +1,16 @@
 import unittest
-from game.table import Table
+from game.game_manager import GameManager
 from game.deck import Deck
 
 
 class TestTable(unittest.TestCase):
     def setUp(self):
-        self.table = Table(1)
+        self.table = GameManager(1)
 
     def test_deal_initial_cards(self):
         """Test that all players and the dealer receive two cards each."""
         for num_players in range(1, 8):  # Testing for 1 to 7 players
-            table = Table(num_players)  # Assuming Table correctly initializes players and a dealer.
+            table = GameManager(num_players)  # Assuming Table correctly initializes players and a dealer.
             table.deck = Deck()  # Assuming this replaces the deck with a fresh one if needed.
             table.deal_initial_cards()
 

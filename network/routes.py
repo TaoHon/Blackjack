@@ -1,126 +1,130 @@
 import asyncio
+import logging
 import uuid
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect, applications
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends
 from pydantic import ValidationError
+
+from game.game_state_machine import GameStateMachine
+from game.event_handler import EventHandler
 from network.connection_manager import ConnectionManager
 from game.player import Player
-from game.table import Table
-from models import PlayerAction, RequestPlayerAction
+from game.game_manager import GameManager
+from network.models import RequestPlayerAction, PlayerAction
 from game.state import GameState, PlayerState
+import utils.log_setup
+from config import get_game_manager, get_event_bus, get_state_machine, \
+    get_event_handler
+from utils.event_bus import EventBus
 
 router = APIRouter()
-manager = ConnectionManager()
+logger = utils.log_setup.setup_logger(name=__name__, log_level=logging.DEBUG)
 
-table = Table(num_seats=2)
 
 @router.websocket("/ws/{client_name}")
-async def websocket_endpoint(websocket: WebSocket, client_name: str):
-    await manager.connect(websocket)
+async def websocket_endpoint(websocket: WebSocket, client_name: str,
+                             game_manager: GameManager = Depends(get_game_manager),
+                             event_bus: EventBus = Depends(get_event_bus),
+                             game_state_machine: GameStateMachine = Depends(get_state_machine),
+                             event_handler: EventHandler = Depends(get_event_handler)):
+    connection_manager = ConnectionManager()
+    await connection_manager.connect(websocket)
     client_id = str(uuid.uuid4())
-    table.initialize_events()  # Ensure we're in the async context
-    if table.get_state() == GameState.WAITING_FOR_PLAYERS_TO_JOIN:
-        try:
-            player = Player(client_name, id=client_id, websocket=websocket)
-            table.add_player(player)
-            await table.waiting_players_to_join.wait()
-        except ValidationError as e:
-            await manager.send_personal_message(f"Invalid data: {e}", player.websocket)
+
+    # Create a new player and add to the game
+    player = Player(name=client_name, id=client_id, websocket=websocket, balance=1000)
+    game_manager.player_manager.add_player(player)
+
     try:
         while True:
-            if table.get_state() == GameState.BETTING:
-                available_bets = table.get_available_bets()
-                player = table.get_player_via_id(client_id)
-                if player.state == PlayerState.WAITING_FOR_BET:
-                    print(f"Waiting for {player.name} to bet")
-                    request_action = RequestPlayerAction(username=player.name, state=table.get_state().name,
-                                                         table=[],
-                                                         available_actions=available_bets)
-                    await manager.send_personal_message(request_action.model_dump_json(), player.websocket)
-                    data = await player.websocket.receive_text()
-                    try:
-                        json_data = PlayerAction.model_validate_json(data)
-                        table.place_bet(player.id, json_data.action)
-                        await table.betting_event.wait()
-                    except ValidationError as e:
-                        await manager.send_personal_message(f"Invalid data: {e}", player.websocket)
+            logger.info(f"Game state {game_state_machine.get_state()}")
+            logger.info(f'Client {player.name} player.state has {player.state} state')
 
-            elif table.get_state() == GameState.AWAITING_PLAYER_ACTION:
-                await table.player_events[player.id].wait()
-                request_action = RequestPlayerAction(username=player.name, state=table.get_state().name,
-                                                     table=table.get_table_state_array(hidden_card=True),
-                                                     available_actions=player.available_actions)
-                await manager.send_personal_message(request_action.model_dump_json(), websocket)
-                data = await websocket.receive_text()
-                try:
-                    json_data = PlayerAction.model_validate_json(data)
-                    table.handle_action(json_data.action, player)
-                except ValidationError as e:
-                    await manager.send_personal_message(f"Invalid data: {e}", player.websocket)
+            if game_state_machine.get_state() == 'betting':
+                await handle_betting_state(player, game_manager, connection_manager, event_handler, websocket,
+                                           game_state_machine)
 
-                # if player is not None:
-                #     print(f"Waiting for {player.name} to bet")
-                #     request_action = RequestPlayerAction(username=player.name, state=table.get_state().name,
-                #                                          table=[],
-                #                                          available_actions=available_bets)
-                #     await manager.send_personal_message(request_action.model_dump_json(), player.websocket)
-                #     data = await player.websocket.receive_text()
-                #     print(f"{data}")
-                #     try:
-                #         action = PlayerAction.model_validate_json(data)
-                #         table.place_bet(player.id, action.action)
-                #     except ValidationError as e:
-                #         await manager.send_personal_message(f"Invalid data: {e}", player.websocket)
-            # await manager.broadcast(new_game_state)
+            elif game_state_machine.get_state() == 'player_turn':
+                await handle_player_turn_state(player, game_manager, connection_manager, websocket, game_state_machine,
+                                               client_id)
+
+            elif game_state_machine.get_state() == 'publish_result':
+                await handle_publish_result_state(player, game_manager, connection_manager, websocket,
+                                                  game_state_machine, event_handler)
+
+            await event_handler.ready_to_start.wait()
+
+
     except WebSocketDisconnect:
-        manager.disconnect(client_name)
+        connection_manager.disconnect(client_id)
+        print(f"Client {client_id} disconnected")
 
 
-# @router.websocket("/ws/{client_id}")
-# async def websocket_endpoint(client_id: str, websocket: WebSocket):
-#     await manager.connect(websocket)
-#     try:
-#         print(f"WebSocket {id(websocket)} connected.")
-#         while True:
-#             if table.get_state() == GameState.WAITING_FOR_PLAYERS_TO_JOIN:
-#                 try:
-#                     player = Player(client_id, id=client_id, websocket=websocket)
-#                     table.add_player(player)
-#                 except ValidationError as e:
-#                     await manager.send_personal_message(f"Invalid data: {e}", player.websocket)
-#
-#             if table.get_state() == GameState.BETTING:
-#                 available_bets = table.get_available_bets()
-#                 player = table.get_player_with_no_bet()
-#                 print(f"{player.name} ready to bet")
-#             await asyncio.sleep(1)  # sleep for a while before next loop iteration to allow other connections
+async def handle_betting_state(player, game_manager, connection_manager, event_handler, websocket, game_state_machine):
+    logger.info(f'Client {player.name} has entered the BETTING state')
+    logger.info(f'Client {player.name} player.state has {player.state} state')
+    available_bets = game_manager.get_available_bets()
+    if player.state == PlayerState.WAIT_FOR_BET:
+        logger.info(f'Client {player.name} player.state has {player.state} state')
+        request_action = RequestPlayerAction(username=player.name, state=game_state_machine.get_state(),
+                                             table=[],
+                                             available_actions=available_bets)
+        await connection_manager.send_personal_message(request_action.model_dump_json(), websocket)
+        data = await websocket.receive_text()
+        logger.info(f"Processing player action {data}")
+        if game_state_machine.get_state() == 'betting':
+            try:
+                json_data = PlayerAction.model_validate_json(data)
+                game_manager.place_bet(player.id, json_data.action)
+            except ValidationError as e:
+                await connection_manager.send_personal_message(f"Invalid data: {e}", websocket)
+                logger.info(f"Current state is {game_state_machine.get_state()}")
+            pass
 
-            # if player is not None:
-            #     print(f"Waiting for {player.name} to bet")
-            #     request_action = RequestPlayerAction(username=player.name, state=table.get_state().name,
-            #                                          table=[],
-            #                                          available_actions=available_bets)
-            #     await manager.send_personal_message(request_action.model_dump_json(), player.websocket)
-            #     data = await player.websocket.receive_text()
-            #     print(f"{data}")
-            #     try:
-            #         action = PlayerAction.model_validate_json(data)
-            #         table.place_bet(player.id, action.action)
-            #     except ValidationError as e:
-            #         await manager.send_personal_message(f"Invalid data: {e}", player.websocket)
-            # elif table.get_state() == GameState.AWAITING_PLAYER_ACTION:
-            #     if player and player.need_action:
-            #         request_action = RequestPlayerAction(username=player.name, state=table.get_state().name,
-            #                                              table=table.get_table_state_array(),
-            #                                              available_actions=player.available_actions)
-            #         await manager.send_personal_message(request_action.model_dump_json(), websocket)
-            #         data = await websocket.receive_text()
-            #         try:
-            #             action = PlayerAction.model_validate_json(data)
-            #             table.handle_action(action, player)
-            #         except ValidationError as e:
-            #             await manager.send_personal_message(f"Invalid data: {e}", websocket)
-    # except WebSocketDisconnect:
-    #     if player:
-    #         table.remove_player(player)
-    #     await manager.disconnect(client_id)
-    #     await manager.broadcast(f"Client #{client_id} left the game")
+        await event_handler.bet_finished.wait()
+
+
+async def handle_player_turn_state(player, game_manager, connection_manager, websocket, game_state_machine, client_id):
+    await game_manager.player_manager.player_events[player.id].wait()
+
+    if player.state != PlayerState.MY_TURN:
+        return
+
+    logger.info(f'Handling turn for {client_id} ({player.name})')
+
+    # Prepare and send the initial request action to the player
+    table_state = game_manager.get_table_state_array(hidden_card=True)
+    actions = player.available_actions if player.state == PlayerState.MY_TURN else []
+    request_action = RequestPlayerAction(username=player.name, state=game_state_machine.get_state(), table=table_state,
+                                         available_actions=actions)
+    await connection_manager.send_personal_message(request_action.model_dump_json(), websocket)
+
+    # Await player action
+    data = await websocket.receive_text()
+    logger.debug(f'Received action from {client_id}: {data}')
+
+    try:
+        json_data = PlayerAction.model_validate_json(data)
+        if json_data.player_name == player.name:
+            game_manager.handle_action(json_data.action, player)
+        else:
+            logger.error(f'Action from mismatched client name: {json_data.player_name} vs {player.name}')
+    except ValidationError as e:
+        logger.error(f'Invalid data from {client_id}: {e}')
+        await connection_manager.send_personal_message(f"Invalid data: {e}", player.websocket)
+
+
+async def handle_publish_result_state(player, game_manager, connection_manager, websocket, game_state_machine,
+                                      event_handler):
+    if player.state == PlayerState.RESULT_NOTIFIED:
+        await event_handler.wait_for_new_round.wait()
+        return
+
+    logger.info(f'Publishing result for {player.name}')
+
+    table_state = game_manager.get_table_state_array(hidden_card=False)
+    request_action = RequestPlayerAction(username=player.name, state=game_state_machine.get_state(), table=table_state,
+                                         available_actions=[])
+    await connection_manager.send_personal_message(request_action.model_dump_json(), websocket)
+
+    player.publish_result()
+    game_manager.player_manager.check_all_results_are_published()

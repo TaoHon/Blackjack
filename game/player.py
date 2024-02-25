@@ -1,4 +1,6 @@
 import logging
+
+import utils.log_setup
 from fastapi import WebSocket
 import game.utils
 from game.state import PlayerState
@@ -7,8 +9,10 @@ from game.state import PlayerState
 class Player:
     id_counter = 0
 
-    def __init__(self, name='Dealer', balance=0, id=None, origin_player_id=None, websocket: WebSocket = None):
-        self.state = PlayerState.WAITING_FOR_BET
+    def __init__(self, logger=logging.Logger, name='Dealer', balance=0, id=None, origin_player_id=None,
+                 websocket: WebSocket = None):
+        self.logger = logger
+        self.state = PlayerState.WAIT_FOR_BET
         self.name = name
         self.balance = balance
         self.cards = []  # List to store the cards in the player's hand.
@@ -22,8 +26,7 @@ class Player:
         self.bet = None
         self.websocket = websocket
 
-        self.logger = logging.getLogger(__name__)
-        self.logger.setLevel(logging.INFO)
+        self.logger = utils.log_setup.setup_logger(name=__name__)
 
     def transition_state(self, new_state):
         """Transition to a new state and call the corresponding method."""
@@ -32,12 +35,15 @@ class Player:
         if new_state == PlayerState.HAS_BET:
             self.transition_state(PlayerState.AWAITING_MY_TURN)
 
-    def reset_player(self):
+    def reset(self):
         self.insurance_taken = False
         self.insurance_bet = None
         self.available_actions = []
-        self.bet = 0
-        self.websocket = None
+        self.bet = None
+
+        self.cards = []
+        self.score = 0
+        self.transition_state(PlayerState.WAIT_FOR_BET)
 
     def hit(self, deck):
         """Adds a card to the player's hand from the deck."""
@@ -80,18 +86,19 @@ class Player:
         amount = int(amount)
         self.bet = amount
         self.balance -= amount
-        self.transition_state(PlayerState.HAS_BET)
+        if self.skip_round():
+            self.transition_state(PlayerState.SKIPPED_ROUND)
+        else:
+            self.transition_state(PlayerState.HAS_BET)
 
     def double_down(self, deck):
         if len(self.cards) == 2:
             self.place_bet(self.bet)  # Double the bet.
             self.hit(deck)
-            print(f"{self.name} doubled down.")
             self.display_hand()
-        else:
-            print("Double down not allowed.")
 
     def split(self, deck):
+        self.logger.info(f'player {self.name} split')
         split_hand = Player(name=f"{self.name} (Split)",
                             balance=0,
                             id=self.id,
@@ -107,9 +114,15 @@ class Player:
         self.insurance_bet = insurance_bet
 
     def stand(self):
-        print(f"{self.name} stands.")
         self.transition_state(PlayerState.HAS_ACTED)
 
     def busted(self):
-        print(f"{self.name} has busted.")
         self.transition_state(PlayerState.HAS_ACTED)
+
+    def skip_round(self):
+        if self.bet == 0:
+            return True
+        return False
+
+    def publish_result(self):
+        self.transition_state(PlayerState.RESULT_NOTIFIED)

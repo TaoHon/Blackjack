@@ -1,31 +1,13 @@
-import logging
-import argparse
+from fastapi import FastAPI
+from uvicorn import run
 
-from game.table import Table
+from network.routes import router
 
-logger = logging.getLogger(__name__)
+# Create an instance of the FastAPI application
+app = FastAPI()
 
-# Set the level of logger to DEBUG. This means we want to catch all log messages
-logger.setLevel(logging.DEBUG)
-
-def main():
-    parser = argparse.ArgumentParser(description="Define the number of players.")
-    parser.add_argument('-p', '--num_players', type=int, required=True, help="The number of players")
-    parser.add_argument('-d', '--num_decks', type=int, required=True, help="The number of decks")
-
-    args = parser.parse_args()
-
-    num_players = args.num_players
-    num_decks = args.num_decks
-    print(f"Number of players: {num_players}")
-
-    table = Table(num_players, num_decks)
-
-    while True:
-        # Start a new round
-        table.wait_for_players()
-        table.play_round()
-        table.cleanup_after_round()
+# Mount the router onto the FastAPI application
+app.include_router(router)
 
 if __name__ == "__main__":
-    main()
+    run(app, host="127.0.0.1", port=7999, log_level="info")
