@@ -12,6 +12,7 @@ class TestPlayer(unittest.TestCase):
         self.mock_logger = MagicMock()
         self.mock_websocket = MagicMock()
         self.mock_deck = MagicMock()
+        self.mock_dealer = MagicMock()
         self.mock_card = MagicMock()
         self.mock_insurance_bet = MagicMock()
         self.player = Player(logger=self.mock_logger, websocket=self.mock_websocket)
@@ -26,17 +27,16 @@ class TestPlayer(unittest.TestCase):
         self.assertEqual(self.player.cards, [])
         self.assertEqual(self.player.score, 0)
         self.assertEqual(self.player.insurance_taken, False)
-        self.assertEqual(self.player.insurance_bet, None)
         self.assertEqual(self.player.available_actions, [])
-        self.assertEqual(self.player.bet, None)
+        self.assertEqual(self.player.bet, 0)
         self.assertEqual(self.player.state, PlayerState.WAIT_FOR_BET)
         self.assertEqual(self.player.has_blackjack, False)
         self.assertEqual(self.player.has_double_down, False)
 
     def test_hit(self):
-        self.mock_deck.deal_card.return_value = self.mock_card
+        self.mock_deck.deal_card.return_value = 102
         self.player.hit(self.mock_deck)
-        self.assertEqual(self.player.cards, [self.mock_card])
+        self.assertEqual(self.player.cards, [102])
 
     def test_calculate_score(self):
         # Test lower limit with one card (Ace considered as 11)
@@ -101,13 +101,14 @@ class TestPlayer(unittest.TestCase):
         self.assertEqual(self.player.balance, -10)
 
     def test_double_down(self):
-        self.mock_deck.deal_card.return_value = self.mock_card
+        self.mock_deck.deal_card.return_value = 105
         self.player.cards = [101, 102]
+        self.player.initial_bet = 10
         self.player.bet = 10
         self.player.balance = 20
-        self.player.double_down(self.mock_deck)
+        self.player.double_down(self.mock_deck, self.mock_dealer)
         self.assertEqual(
-            self.player.cards, [101, 102, self.mock_card])
+            self.player.cards, [101, 102, 105])
         self.assertEqual(self.player.bet, 20)
         self.assertEqual(self.player.balance, 10)
 
@@ -115,6 +116,7 @@ class TestPlayer(unittest.TestCase):
         self.mock_deck.deal_card.side_effect = [103, 104, 105]
         self.player.cards = [102, 102]
         self.player.balance = 100
+        self.player.initial_bet = 20
         self.player.bet = 20
         split_player = self.player.split(self.mock_deck)
         self.assertIsNotNone(split_player)
