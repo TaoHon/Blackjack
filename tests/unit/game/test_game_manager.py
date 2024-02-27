@@ -525,5 +525,99 @@ class TestGameManagerDetermineWinners(unittest.TestCase):
         self.assertEqual(self.player1.balance, 1000)
 
 
+class TestGameManagerRestFunctions(unittest.TestCase):
+    @patch('game.player_manager.PlayerManager')
+    @patch('game.player.Player')
+    @patch('game.player.Player')
+    @patch('game.deck.Deck')
+    def setUp(self, MockDeck, MockDealer, MockPlayer, MockPlayerManager):
+        self.logger = MagicMock()
+        self.event_bus = MagicMock()
+        self.game_manager = GameManager(num_decks=1, player_manager=MockPlayerManager(), event_bus=self.event_bus,
+                                        logger=self.logger)
+        self.game_manager.dealer = MockDealer()
+        self.game_manager.deck = MockDeck()
+        self.player = MockPlayer()
+
+    def test_get_available_bets(self):
+        self.game_manager.available_bets = [0, 1, 2, 3, 4, 5, 6]
+        available_bets = self.game_manager.get_available_bets()
+        self.assertEqual(available_bets, [0, 1, 2, 3, 4, 5, 6])
+
+    def test_add_player(self):
+        self.game_manager.add_player(self.player)
+        self.game_manager.player_manager.add_player.assert_called_once_with(self.player)
+
+    def test_reshuffle_deck(self):
+        self.game_manager.reshuffle_deck()
+        self.game_manager.deck.shuffle_if_needed.assert_called_once()
+
+    def test_find_original_player(self):
+        # Setup
+        original_player = MagicMock()
+        original_player.id = 1
+        split_player = MagicMock()
+        split_player.origin_player_id = 1
+
+        self.game_manager.player_manager.players = [original_player]
+
+        # Execute
+        found_player = self.game_manager.find_original_player(split_player)
+
+        # Assert
+        self.assertIsNotNone(found_player, "The method should return an original player object.")
+        self.assertEqual(found_player.id, split_player.origin_player_id,
+                         "The found player ID should match the split player's origin_player_id.")
+
+        # Test with no matching original player
+        split_player.origin_player_id = 999
+        found_player = self.game_manager.find_original_player(split_player)
+        self.assertIsNone(found_player, "Should return None if no original player matches the origin_player_id.")
+
+    def test_cleanup_after_round(self):
+        # Setup
+        # Assume that both reset_players and reset methods on player_manager and dealer have been properly mocked.
+        # These methods don't return anything but reset the state of the players and dealer.
+        initial_round_counter = self.game_manager.round_counter
+
+        # Mock the reset behaviors
+        self.game_manager.player_manager.reset_players = MagicMock()
+        self.game_manager.dealer.reset = MagicMock()
+
+        # Execute
+        self.game_manager.cleanup_after_round()
+
+        # Assert
+        self.game_manager.player_manager.reset_players.assert_called_once_with()
+        self.game_manager.dealer.reset.assert_called_once_with()
+        self.assertEqual(self.game_manager.round_counter, initial_round_counter + 1,
+                         "Round counter should be incremented by 1.")
+        self.logger.info.assert_any_call("Cleaning up")
+        self.logger.info.assert_any_call("Cleaning up done")
+
+    def test_get_table_state_array(self):
+        # Setup
+        self.game_manager.dealer.cards = [110, 207, 305]  # Example dealer cards
+        self.game_manager.player_manager.players = [self.player]
+        self.game_manager.player_manager.get_seat_number = MagicMock(return_value=1)
+        self.player.cards = [108, 209]  # Example player cards
+        self.player.id = "player1"
+
+        # Test with hidden_card = False
+        expected_state_without_hidden = [900, 110, 207, 305, 901, 108, 209]
+        actual_state_without_hidden = self.game_manager.get_table_state_array(hidden_card=False)
+        self.assertEqual(actual_state_without_hidden, expected_state_without_hidden,
+                         "Table state array should match expected output without hidden card.")
+
+        # Test with hidden_card = True
+        expected_state_with_hidden = [900, 110, 888, 305, 901, 108, 209]
+        actual_state_with_hidden = self.game_manager.get_table_state_array(hidden_card=True)
+        self.assertEqual(actual_state_with_hidden, expected_state_with_hidden,
+                         "Table state array should match expected output with hidden card.")
+
+        # Verify get_seat_number was called correctly for the player
+        self.game_manager.player_manager.get_seat_number.assert_called_with("player1")
+
+
 if __name__ == '__main__':
     unittest.main()

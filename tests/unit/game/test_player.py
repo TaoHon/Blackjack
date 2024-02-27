@@ -30,7 +30,6 @@ class TestPlayer(unittest.TestCase):
         self.assertEqual(self.player.available_actions, [])
         self.assertEqual(self.player.bet, 0)
         self.assertEqual(self.player.state, PlayerState.WAIT_FOR_BET)
-        self.assertEqual(self.player.has_blackjack, False)
         self.assertEqual(self.player.has_double_down, False)
 
     def test_hit(self):

@@ -33,29 +33,23 @@ async def websocket_endpoint(websocket: WebSocket, client_name: str,
     player = Player(name=client_name, id=client_id, websocket=websocket, balance=1000)
     game_manager.player_manager.add_player(player)
 
-    try:
-        while True:
-            # logger.debug(f"Game state {game_state_machine.get_state()}")
-            # logger.debug(f'Client {player.name} player.state has {player.state} state')
+    while True:
+        # logger.debug(f"Game state {game_state_machine.get_state()}")
+        # logger.debug(f'Client {player.name} player.state has {player.state} state')
 
-            if game_state_machine.get_state() == 'betting':
-                await handle_betting_state(player, game_manager, connection_manager, event_handler, websocket,
-                                           game_state_machine)
+        if game_state_machine.get_state() == 'betting':
+            await handle_betting_state(player, game_manager, connection_manager, event_handler, websocket,
+                                       game_state_machine)
 
-            elif game_state_machine.get_state() == 'player_turn':
-                await handle_player_turn_state(player, game_manager, connection_manager, websocket, game_state_machine,
-                                               client_id)
+        elif game_state_machine.get_state() == 'player_turn':
+            await handle_player_turn_state(player, game_manager, connection_manager, websocket, game_state_machine,
+                                           client_id)
 
-            elif game_state_machine.get_state() == 'publish_result':
-                await handle_publish_result_state(player, game_manager, connection_manager, websocket,
-                                                  game_state_machine, event_handler)
+        elif game_state_machine.get_state() == 'publish_result':
+            await handle_publish_result_state(player, game_manager, connection_manager, websocket,
+                                              game_state_machine, event_handler)
 
-            await event_handler.ready_to_start.wait()
-
-
-    except WebSocketDisconnect:
-        connection_manager.disconnect(client_id)
-        print(f"Client {client_id} disconnected")
+        await event_handler.ready_to_start.wait()
 
 
 async def handle_betting_state(player, game_manager, connection_manager, event_handler, websocket, game_state_machine):

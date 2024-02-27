@@ -35,6 +35,10 @@ class TestDeck(unittest.TestCase):
         self.deck.deal_card()
         self.assertEqual(len(self.deck.cards), initial_len - 1)
 
+        self.deck.cards = []
+        self.deck.deal_card()
+        self.assertEqual(len(self.deck.cards), initial_len - 1)
+
     def test_random_plastic_card_index(self):
         index = self.deck.random_plastic_card_index()
         half_length = self.deck.maximum_deck_size // 2

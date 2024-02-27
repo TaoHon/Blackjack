@@ -10,7 +10,7 @@ class PlayerManager:
         self.player_events = {}  # Maps player IDs to asyncio Events
         self.seats = {}  # Maps seat numbers to player IDs
         self.num_seats = num_seats
-        self.available_seats = list(range(1, num_seats + 1))  # create a list of available seats
+        self.available_seats = list(range(0, num_seats))  # create a list of available seats
         self.logger = logger
         self.event_bus = event_bus
         self.player_events = {}
@@ -19,7 +19,7 @@ class PlayerManager:
         if not self.available_seats:
             self.logger.info(f"{player.name} cannot join the game. Table is full.")
             return False
-        elif not self.player_exists(player.name):
+        elif not self.player_exists(player.id):
             seat = self.available_seats.pop(0)
             self.seats[seat] = player.id  # assign seat to player
             self.logger.info(f"Adding {player.name} to seat {seat}, there are {len(self.available_seats)} seats left.")
@@ -29,7 +29,8 @@ class PlayerManager:
                 self.logger.info(f"No more seats left to join the game. Table is full.")
                 self.logger.info(f"Game will start soon.")
                 self.event_bus.publish('ready_to_bet')
-        return True
+            return True
+        return False
 
     def remove_player(self, player_id) -> bool:
         """Remove a player from the game."""

@@ -51,8 +51,6 @@ class GameManager:
             if all(p.bet is not None for p in self.player_manager.players):
                 self.logger.info("All players have placed their bets.")
                 self.event_bus.publish('all_betting_done')
-            else:
-                self.logger.info("Not all players have placed their bets yet.")
             return True
         else:
             self.logger.error(f"Player with id {player_id} not found.")

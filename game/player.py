@@ -45,7 +45,6 @@ class Player:
         self.split_counter = 0
         self.transition_state(PlayerState.WAIT_FOR_BET)
 
-        self.has_blackjack = False
         self.has_double_down = False
         self.initial_bet = 0
 
