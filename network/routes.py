@@ -23,7 +23,6 @@ logger = utils.log_setup.setup_logger(name=__name__, log_level=logging.DEBUG)
 @router.websocket("/ws/{client_name}")
 async def websocket_endpoint(websocket: WebSocket, client_name: str,
                              game_manager: GameManager = Depends(get_game_manager),
-                             event_bus: EventBus = Depends(get_event_bus),
                              game_state_machine: GameStateMachine = Depends(get_state_machine),
                              event_handler: EventHandler = Depends(get_event_handler)):
     connection_manager = ConnectionManager()
@@ -72,7 +71,7 @@ async def handle_betting_state(player, game_manager, connection_manager, event_h
     if game_state_machine.get_state() == 'betting':
         try:
             json_data = PlayerAction.model_validate_json(data)
-            game_manager.place_bet(player.id, json_data.action)
+            game_manager.place_initial_bet(player.id, json_data.action)
         except ValidationError as e:
             await connection_manager.send_personal_message(f"Invalid data: {e}", websocket)
             logger.info(f"Current state is {game_state_machine.get_state()}")

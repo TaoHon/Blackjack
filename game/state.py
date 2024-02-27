@@ -17,11 +17,8 @@ class GameState(Enum):  # Error gone, we now subclass Enum
 
 class PlayerState(Enum):
     WAIT_FOR_BET = auto()
-    HAS_BET = auto()
     AWAITING_MY_TURN = auto()
     MY_TURN = auto()
     HAS_ACTED = auto()
-    TOOK_INSURANCE = auto()
-    BUSTED = auto()
     SKIPPED_ROUND = auto()
     RESULT_NOTIFIED = auto()

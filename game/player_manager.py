@@ -133,4 +133,4 @@ class PlayerManager:
 
     def remove_split_player(self):
         self.players = [player for player in self.players if
-                        player.origin_player_number is None]
+                        player.origin_player_id is None]

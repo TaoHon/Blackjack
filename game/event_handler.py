@@ -68,7 +68,7 @@ class EventHandler:
         self.event_bus.publish('determine_winners_done')
 
     def publish_results(self):
-        pass
+        self.wait_for_new_round.clear()
 
     def cleanup_after_round(self):
         self.logger.debug("cleanup_after_round")

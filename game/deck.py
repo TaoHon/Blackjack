@@ -14,13 +14,12 @@ class Deck:
     def _create_deck(self):
         # Create multiple decks of cards
         cards = [suit * 100 + value for suit in range(1, 5) for value in range(1, 14)] * self.num_decks
-        # cards = [suit * 100 + 10 for suit in range(1, 5)] * self.num_decks
-
         return cards
 
     def shuffle(self):
+        self.cards = self._create_deck()
         random.shuffle(self.cards)
-        self.plastic_card_pos = self.plastic_card_pos
+        self.plastic_card_pos = self.random_plastic_card_index()
 
     def deal_card(self):
         if not self.cards:

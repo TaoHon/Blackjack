@@ -18,7 +18,7 @@ def convert_card_code(card):
     else:
         face_value = str(value)
 
-    return (f"{suit}{face_value}")
+    return f"{suit}{face_value}"
 
 
 def convert_actions(actions):
