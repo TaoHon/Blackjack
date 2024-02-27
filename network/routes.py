@@ -65,7 +65,7 @@ async def handle_betting_state(player, game_manager, connection_manager, event_h
     if game_state_machine.get_state() == 'betting':
         try:
             json_data = PlayerAction.model_validate_json(data)
-            game_manager.place_initial_bet(player.id, json_data.action)
+            game_manager.place_bet(player.id, json_data.action)
         except ValidationError as e:
             await connection_manager.send_personal_message(f"Invalid data: {e}", websocket)
             logger.info(f"Current state is {game_state_machine.get_state()}")

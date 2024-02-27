@@ -99,8 +99,8 @@ class Player:
         self.balance -= amount
 
     def place_initial_bet(self, amount):
-        self.place_bet(amount)
-        self.initial_bet += amount
+        self.place_bet(int(amount))
+        self.initial_bet += int(amount)
 
         if self.skip_round():
             self.transition_state(PlayerState.SKIPPED_ROUND)
