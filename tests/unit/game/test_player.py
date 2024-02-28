@@ -124,7 +124,8 @@ class TestPlayer(unittest.TestCase):
         self.assertEqual(split_player.cards, [102, 104])
 
         self.assertEqual(self.player.balance, 80)
-        self.assertEqual(self.player.bet, 40)
+        self.assertEqual(self.player.bet, 20)
+        self.assertEqual(split_player.bet, 20)
 
     def test_stand(self):
         self.player.stand()
@@ -143,33 +144,26 @@ class TestPlayer(unittest.TestCase):
         self.assertEqual(self.player.state, PlayerState.RESULT_NOTIFIED)
 
     def test_split_allowed(self):
-        self.player.split_counter = 0
         self.player.cards = [202, 102]
-        self.assertEqual(self.player.split_allowed(), True)
+        self.assertEqual(self.player.split_allowed(split_counter=0), True)
 
-        self.player.split_counter = 3
         self.player.cards = [202, 102]
-        self.assertEqual(self.player.split_allowed(), False)
+        self.assertEqual(self.player.split_allowed(split_counter=3), False)
 
-        self.player.split_counter = 0
         self.player.cards = [301, 401]
-        self.assertEqual(self.player.split_allowed(), True)
+        self.assertEqual(self.player.split_allowed(split_counter=0), True)
 
-        self.player.split_counter = 1
         self.player.cards = [301, 401]
-        self.assertEqual(self.player.split_allowed(), False)
+        self.assertEqual(self.player.split_allowed(split_counter=1), False)
 
-        self.player.split_counter = 0
         self.player.cards = [301, 402]
-        self.assertEqual(self.player.split_allowed(), False)
+        self.assertEqual(self.player.split_allowed(split_counter=0), False)
 
-        self.player.split_counter = 0
         self.player.cards = [301, 401, 402]
-        self.assertEqual(self.player.split_allowed(), False)
+        self.assertEqual(self.player.split_allowed(split_counter=0), False)
 
-        self.player.split_counter = 0
         self.player.cards = [301]
-        self.assertEqual(self.player.split_allowed(), False)
+        self.assertEqual(self.player.split_allowed(split_counter=0), False)
 
     def test_double_down_allowed(self):
         self.player.cards = [301]
