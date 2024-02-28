@@ -51,7 +51,7 @@ class GameManager:
                 self.logger.info("All players skipping their round.")
                 self.event_bus.publish('all_players_skipped')
                 return True
-            if all(p.bet is not None for p in self.player_manager.players):
+            if all(p.state is not PlayerState.WAIT_FOR_BET for p in self.player_manager.players):
                 self.logger.info("All players have placed their bets.")
                 self.event_bus.publish('all_betting_done')
             return True

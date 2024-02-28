@@ -92,5 +92,3 @@ class EventHandler:
         self.ready_to_start.set()
         self.logger.debug("bet_finished.set()")
         self.bet_finished.set()
-
-        return

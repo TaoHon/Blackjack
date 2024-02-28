@@ -135,7 +135,8 @@ class Player:
                             origin_player_id=self.id or self.origin_player_id,
                             bet=self.initial_bet,
                             initial_bet=self.initial_bet,
-                            state=PlayerState.AWAITING_MY_TURN)
+                            state=PlayerState.AWAITING_MY_TURN,
+                            websocket=self.websocket)
         # Keep original player number if this is already a split hand
         # Place a bet equal to the original hand.
         self.balance -= self.initial_bet
@@ -146,6 +147,7 @@ class Player:
 
     def take_insurance(self, dealer):
         insurance_bet = self.initial_bet / 2
+        self.balance -= insurance_bet
         dealer.balance += insurance_bet
         self.insurance_taken = True
 

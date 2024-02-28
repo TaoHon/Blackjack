@@ -75,18 +75,30 @@ async def handle_betting_state(player, game_manager, connection_manager, event_h
 
 
 async def handle_player_turn_state(player, game_manager, connection_manager, websocket, game_state_machine, client_id):
+    origin_player = player
     await game_manager.player_manager.player_events[player.id].wait()
 
     if player.state != PlayerState.MY_TURN:
-        return
+        logger.debug(f'Getting split player for {client_id}: {player.name}')
+        split_player = game_manager.player_manager.get_waiting_split_player(player)
+        # create a copy of the origin player
+        if split_player is None:
+            logger.debug(f'No split player found')
+            return
+        else:
+            player = split_player
+            logger.debug(f'Split player found: {player.name}')
 
     logger.info(f'Handling turn for {client_id} ({player.name})')
 
     # Prepare and send the initial request action to the player
     table_state = game_manager.get_table_state_array(hidden_card=True)
     actions = player.available_actions if player.state == PlayerState.MY_TURN else []
+
     request_action = RequestPlayerAction(username=player.name, state=game_state_machine.get_state(), table=table_state,
                                          available_actions=actions, balance=player.balance)
+    logger.debug(f'Requesting action: {request_action}')
+
     await connection_manager.send_personal_message(request_action.model_dump_json(), websocket)
 
     # Await player action
@@ -97,6 +109,7 @@ async def handle_player_turn_state(player, game_manager, connection_manager, web
         json_data = PlayerAction.model_validate_json(data)
         if json_data.player_name == player.name:
             game_manager.handle_action(json_data.action, player)
+            player = origin_player
         else:
             logger.error(f'Action from mismatched client name: {json_data.player_name} vs {player.name}')
     except ValidationError as e:

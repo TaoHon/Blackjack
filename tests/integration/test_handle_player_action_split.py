@@ -11,7 +11,7 @@ from utils.log_setup import setup_logger
 import logging
 
 
-class TestDeterminingWinnersAndPayouts(unittest.TestCase):
+class TestHandlePlayerActionSplit(unittest.TestCase):
     def setUp(self):
         self.event_bus = EventBus()
         self.logger = setup_logger(log_level=logging.DEBUG, name=__name__)

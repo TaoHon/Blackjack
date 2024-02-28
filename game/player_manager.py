@@ -153,4 +153,9 @@ class PlayerManager:
                 split_counter += 1
         return split_counter
 
+    def get_waiting_split_player(self, origin_player):
+        for player in self.players:
+            if player.origin_player_id == origin_player.id and player.state == PlayerState.MY_TURN:
+                return player
+        return None
 
