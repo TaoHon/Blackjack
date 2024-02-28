@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import time
 import uuid
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends
 from pydantic import ValidationError
@@ -9,7 +10,7 @@ from game.event_handler import EventHandler
 from network.connection_manager import ConnectionManager
 from game.player import Player
 from game.game_manager import GameManager
-from network.models import RequestPlayerAction, PlayerAction
+from network.models import RequestPlayerAction, PlayerAction, GameResult
 from game.state import GameState, PlayerState
 import utils.log_setup
 from config import get_game_manager, get_event_bus, get_state_machine, \
@@ -20,6 +21,24 @@ router = APIRouter()
 logger = utils.log_setup.setup_logger(name=__name__, log_level=logging.DEBUG)
 
 
+@router.websocket("/ws/result/publish_results")
+async def websocket_broadcast_results(websocket: WebSocket,
+                                      game_manager: GameManager = Depends(get_game_manager),
+                                      game_state_machine: GameStateMachine = Depends(get_state_machine),
+                                      event_handler: EventHandler = Depends(get_event_handler)):
+    connection_manager = ConnectionManager()
+    await connection_manager.connect(websocket)
+
+    while True:
+        await event_handler.wait_for_result.wait()
+        balances = {}
+        for player in game_manager.player_manager.players:
+            balances[player.name] = player.balance
+
+        # Assuming game_manager.round_counter exists and tracks the current round
+        game_result = GameResult(balances=balances, round=game_manager.round_counter)
+
+        await connection_manager.send_personal_message(game_result.model_dump_json(), websocket)
 @router.websocket("/ws/{client_name}")
 async def websocket_endpoint(websocket: WebSocket, client_name: str,
                              game_manager: GameManager = Depends(get_game_manager),

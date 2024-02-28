@@ -29,6 +29,7 @@ class EventHandler:
         self.wait_for_dealer = Event()
 
         self.wait_for_new_round = Event()
+        self.wait_for_result = Event()
 
     def start_betting(self):
         self.ready_to_start.set()
@@ -69,11 +70,13 @@ class EventHandler:
 
     def publish_results(self):
         self.wait_for_new_round.clear()
+        self.wait_for_result.set()
 
     def cleanup_after_round(self):
         self.logger.debug("cleanup_after_round")
         self.logger.debug("bet_finished.set()")
         self.bet_finished.clear()
+        self.wait_for_result.clear()
         self.game_manager.player_manager.clear_all_player_events()
         self.game_manager.player_manager.reset_all_players()
 

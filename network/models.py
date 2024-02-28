@@ -1,3 +1,5 @@
+from typing import Dict
+
 from pydantic import BaseModel
 
 
@@ -14,3 +16,8 @@ class RequestPlayerAction(BaseModel):
     balance: float
     available_actions: list
     # Add more fields as needed
+
+
+class GameResult(BaseModel):
+    balances: Dict[str, float]
+    round: int
