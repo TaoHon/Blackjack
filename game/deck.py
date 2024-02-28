@@ -14,6 +14,7 @@ class Deck:
     def _create_deck(self):
         # Create multiple decks of cards
         cards = [suit * 100 + value for suit in range(1, 5) for value in range(1, 14)] * self.num_decks
+
         return cards
 
     def shuffle(self):

@@ -6,6 +6,9 @@ import game.utils
 from game.state import GameState, PlayerState
 
 
+
+
+
 class GameManager:
     def __init__(self, num_decks, player_manager, event_bus, logger):
         self.logger = logger
@@ -65,7 +68,7 @@ class GameManager:
         actions = ["Hit (h)", "Stand (s)"]
         if player.double_down_allowed():
             actions.append("Double Down (d)")
-        if player.split_allowed():
+        if player.split_allowed(self.player_manager.count_split_players(player)):
             actions.append("Split (p)")
         if player.insurance_allowed(self.dealer):  # Assuming a flag to track if insurance is taken
             actions.append("Insurance (i)")
@@ -88,6 +91,7 @@ class GameManager:
         elif player_action == 'p':
             # Split logic here; would require managing additional hand
             split_player = player.split(self.deck)
+            self.dealer.balance += player.initial_bet
             self.player_manager.insert_split_player(player, split_player)
             self.logger.debug(f"player {player.name} split")
 
@@ -132,11 +136,12 @@ class GameManager:
             elif self.dealer.score > player_score:
                 pass
 
-            print(f"Round: {self.round_counter} Player {player.name} balance: {player.balance}")
+            self.logger.info(f"Round: {self.round_counter} Player {player.name} balance: {player.balance}")
 
         self.player_manager.remove_split_player()
 
-        print(f"Round: {self.round_counter} Dealer {self.dealer.name} balance: {self.dealer.balance}")
+        self.logger.info(f"Round: {self.round_counter} Dealer {self.dealer.name} balance: {self.dealer.balance}")
+
 
     def find_original_player(self, split_player):
         # This method would search for the original player based on the origin_player_number.
@@ -193,3 +198,4 @@ class GameManager:
                 return False
         # If all players are skipping the round, return True
         return True
+

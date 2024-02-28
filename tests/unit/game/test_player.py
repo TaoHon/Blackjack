@@ -144,16 +144,10 @@ class TestPlayer(unittest.TestCase):
 
     def test_split_allowed(self):
         self.player.split_counter = 0
-
         self.player.cards = [202, 102]
         self.assertEqual(self.player.split_allowed(), True)
 
-        self.player.cards = [202, 102]
-        self.assertEqual(self.player.split_allowed(), True)
-
-        self.player.cards = [202, 102]
-        self.assertEqual(self.player.split_allowed(), True)
-
+        self.player.split_counter = 3
         self.player.cards = [202, 102]
         self.assertEqual(self.player.split_allowed(), False)
 
@@ -161,6 +155,7 @@ class TestPlayer(unittest.TestCase):
         self.player.cards = [301, 401]
         self.assertEqual(self.player.split_allowed(), True)
 
+        self.player.split_counter = 1
         self.player.cards = [301, 401]
         self.assertEqual(self.player.split_allowed(), False)
 

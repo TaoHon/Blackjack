@@ -87,12 +87,6 @@ class PlayerManager:
                 return player
         return None
 
-    def player_exists(self, player_id: str):
-        for player in self.players:
-            if player.id == player_id:
-                return True
-        return False
-
     def get_seat_number(self, player_id):
         for seat, id in self.seats.items():
             if id == player_id:
@@ -133,5 +127,30 @@ class PlayerManager:
             player.reset()
 
     def remove_split_player(self):
-        self.players = [player for player in self.players if
-                        player.origin_player_id is None]
+        # Initialize a temporary list for players to keep
+        players_to_keep = []
+
+        # Go through each player in our current list
+        for player in self.players:
+            # If this player is an original player, keep them
+            if player.origin_player_id is None:
+                players_to_keep.append(player)
+            # Otherwise, this player is a split player
+            else:
+                # Find their origin player and add this player's balance to them
+                for origin_player in self.players:
+                    if origin_player.id == player.origin_player_id:
+                        origin_player.balance += player.balance
+                        break  # No need to check other players once we've found ours
+
+        # Set our player list to be the list of players we're keeping
+        self.players = players_to_keep
+
+    def count_split_players(self, player):
+        split_counter = 0
+        for player in self.players:
+            if player.origin_player_id == player.id:
+                split_counter += 1
+        return split_counter
+
+

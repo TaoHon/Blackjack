@@ -9,10 +9,11 @@ from game.state import PlayerState
 class Player:
     id_counter = 0
 
-    def __init__(self, logger=logging.Logger, name='Dealer', balance=0, id=None, origin_player_id=None,
+    def __init__(self, logger=logging.Logger, name='Dealer', balance=0, id=None, origin_player_id=None, bet=0, initial_bet=0,
+                 state=PlayerState.WAIT_FOR_BET,
                  websocket: WebSocket = None):
         self.logger = logger
-        self.state = PlayerState.WAIT_FOR_BET
+        self.state = state
         self.name = name
         self.balance = balance
         self.cards = []  # List to store the cards in the player's hand.
@@ -22,11 +23,10 @@ class Player:
 
         self.insurance_taken = False
         self.available_actions = []
-        self.bet = 0
+        self.bet = bet
         self.websocket = websocket
         self.has_double_down = False
-        self.initial_bet = 0
-        self.split_counter = 0
+        self.initial_bet = initial_bet
 
         self.logger = utils.log_setup.setup_logger(name=__name__)
 
@@ -42,7 +42,6 @@ class Player:
 
         self.cards = []
         self.score = 0
-        self.split_counter = 0
         self.transition_state(PlayerState.WAIT_FOR_BET)
 
         self.has_double_down = False
@@ -116,14 +115,12 @@ class Player:
             return True
         return False
 
-    def split_allowed(self):
+    def split_allowed(self, split_counter):
         if len(self.cards) == 2 and self.cards[0] % 100 == self.cards[1] % 100:
             # check split times
-            if (self.cards[0] % 100 != 1) and self.split_counter < 3:
-                self.split_counter += 1
+            if (self.cards[0] % 100 != 1) and split_counter < 3:
                 return True
-            elif (self.cards[0] % 100 == 1) and self.split_counter < 1:
-                self.split_counter += 1
+            elif (self.cards[0] % 100 == 1) and split_counter < 1:
                 return True
             else:
                 return False
@@ -135,11 +132,13 @@ class Player:
         split_hand = Player(name=f"{self.name} (Split)",
                             balance=0,
                             id=self.id,
-                            origin_player_id=self.id or self.origin_player_id)  # Keep original player number if this is already a split hand
+                            origin_player_id=self.id or self.origin_player_id,
+                            bet=self.initial_bet,
+                            initial_bet=self.initial_bet,
+                            state=PlayerState.AWAITING_MY_TURN)
+        # Keep original player number if this is already a split hand
         # Place a bet equal to the original hand.
         self.balance -= self.initial_bet
-        split_hand.bet = self.initial_bet
-        self.bet += self.initial_bet
         split_hand.cards.append(self.cards.pop())  # Move one card to the split hand.
         self.hit(deck)  # Draw new cards for both hands.
         split_hand.hit(deck)
