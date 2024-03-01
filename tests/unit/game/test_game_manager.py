@@ -599,7 +599,7 @@ class TestGameManagerRestFunctions(unittest.TestCase):
         # Setup
         self.game_manager.dealer.cards = [110, 207, 305]  # Example dealer cards
         self.game_manager.player_manager.players = [self.player]
-        self.game_manager.player_manager.get_seat_number = MagicMock(return_value=1)
+        self.game_manager.player_manager.get_seat_number = MagicMock(return_value=0)
         self.player.cards = [108, 209]  # Example player cards
         self.player.id = "player1"
 

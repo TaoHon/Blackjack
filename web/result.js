@@ -23,10 +23,14 @@ function initChart() {
             },
             scales: {
                 y: {
-                    beginAtZero: true,
+                    beginAtZero: false,
                     title: {
                         display: true,
                         text: 'Balance'
+                    },
+                    ticks: {
+                        // Include optional padding min/max values
+                        // padding: 10
                     }
                 },
                 x: {
@@ -49,6 +53,11 @@ function updateDiagram(data) {
     // Update chart labels with new round
     myChart.data.labels.push(`Round ${round}`);
 
+    // If there are more than 1000 rounds, remove the oldest one
+    if (myChart.data.labels.length > 1000) {
+        myChart.data.labels.shift();
+    }
+
     // Update or create dataset for each player
     Object.keys(balances).forEach(playerName => {
         const balance = balances[playerName];
@@ -68,6 +77,11 @@ function updateDiagram(data) {
 
         // Append new balance data
         dataset.data.push(balance);
+
+        // If there are more than 1000 data points for this player, remove the oldest one
+        if (dataset.data.length > 1000) {
+            dataset.data.shift();
+        }
     });
 
     myChart.update();

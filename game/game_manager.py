@@ -167,7 +167,7 @@ class GameManager:
             table_state = [900] + self.dealer.cards
         # Append each player's hand to the state, separated by 900 + player number
         for player in self.player_manager.players:
-            player_state = [900 + self.player_manager.get_seat_number(player.id)] + player.cards
+            player_state = [901 + self.player_manager.get_seat_number(player.id)] + player.cards
             table_state.extend(player_state)
         return table_state
 

@@ -39,6 +39,8 @@ async def websocket_broadcast_results(websocket: WebSocket,
         game_result = GameResult(balances=balances, round=game_manager.round_counter)
 
         await connection_manager.send_personal_message(game_result.model_dump_json(), websocket)
+
+
 @router.websocket("/ws/{client_name}")
 async def websocket_endpoint(websocket: WebSocket, client_name: str,
                              game_manager: GameManager = Depends(get_game_manager),
@@ -77,7 +79,8 @@ async def handle_betting_state(player, game_manager, connection_manager, event_h
     logger.info(f'Client {player.name} player.state has {player.state} state')
     request_action = RequestPlayerAction(username=player.name, state=game_state_machine.get_state(),
                                          table=[], balance=player.balance,
-                                         available_actions=available_bets)
+                                         available_actions=available_bets,
+                                         seat=game_manager.player_manager.get_seat_number(player.id))
     await connection_manager.send_personal_message(request_action.model_dump_json(), websocket)
     data = await websocket.receive_text()
     logger.info(f"Processing player action {data}")
@@ -115,7 +118,8 @@ async def handle_player_turn_state(player, game_manager, connection_manager, web
     actions = player.available_actions if player.state == PlayerState.MY_TURN else []
 
     request_action = RequestPlayerAction(username=player.name, state=game_state_machine.get_state(), table=table_state,
-                                         available_actions=actions, balance=player.balance)
+                                         available_actions=actions, balance=player.balance,
+                                         seat=game_manager.player_manager.get_seat_number(player.id))
     logger.debug(f'Requesting action: {request_action}')
 
     await connection_manager.send_personal_message(request_action.model_dump_json(), websocket)
@@ -146,7 +150,8 @@ async def handle_publish_result_state(player, game_manager, connection_manager, 
 
     table_state = game_manager.get_table_state_array(hidden_card=False)
     request_action = RequestPlayerAction(username=player.name, state=game_state_machine.get_state(), table=table_state,
-                                         balance=player.balance, available_actions=[])
+                                         balance=player.balance, available_actions=[],
+                                         seat=game_manager.player_manager.get_seat_number(player.id))
     await connection_manager.send_personal_message(request_action.model_dump_json(), websocket)
 
     player.publish_result()
