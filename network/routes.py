@@ -77,7 +77,7 @@ async def handle_betting_state(player, game_manager, connection_manager, event_h
     available_bets = game_manager.get_available_bets()
 
     logger.info(f'Client {player.name} player.state has {player.state} state')
-    request_action = RequestPlayerAction(username=player.name, state=game_state_machine.get_state(),
+    request_action = RequestPlayerAction(player_name=player.name, state=game_state_machine.get_state(),
                                          table=[], balance=player.balance,
                                          available_actions=available_bets,
                                          seat=game_manager.player_manager.get_seat_number(player.id))
@@ -117,7 +117,7 @@ async def handle_player_turn_state(player, game_manager, connection_manager, web
     table_state = game_manager.get_table_state_array(hidden_card=True)
     actions = player.available_actions if player.state == PlayerState.MY_TURN else []
 
-    request_action = RequestPlayerAction(username=player.name, state=game_state_machine.get_state(), table=table_state,
+    request_action = RequestPlayerAction(player_name=player.name, state=game_state_machine.get_state(), table=table_state,
                                          available_actions=actions, balance=player.balance,
                                          seat=game_manager.player_manager.get_seat_number(player.id))
     logger.debug(f'Requesting action: {request_action}')
@@ -149,7 +149,7 @@ async def handle_publish_result_state(player, game_manager, connection_manager, 
     logger.info(f'Publishing result for {player.name}')
 
     table_state = game_manager.get_table_state_array(hidden_card=False)
-    request_action = RequestPlayerAction(username=player.name, state=game_state_machine.get_state(), table=table_state,
+    request_action = RequestPlayerAction(player_name=player.name, state=game_state_machine.get_state(), table=table_state,
                                          balance=player.balance, available_actions=[],
                                          seat=game_manager.player_manager.get_seat_number(player.id))
     await connection_manager.send_personal_message(request_action.model_dump_json(), websocket)

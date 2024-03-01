@@ -5,7 +5,7 @@ from pydantic import BaseModel
 
 class PlayerAction(BaseModel):
     player_name: str
-    available_actions: str
+    action: str
 
 
 class RequestPlayerAction(BaseModel):
@@ -17,6 +17,7 @@ class RequestPlayerAction(BaseModel):
     available_actions: list
 
     # Add more fields as needed
+
 
 class GameResult(BaseModel):
     balances: Dict[str, float]
