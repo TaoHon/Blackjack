@@ -19,7 +19,7 @@ class GameManager:
         self.deck = Deck(num_decks=num_decks)
         self.deck.shuffle()
         self.dealer = Player(name='dealer')
-        self.available_bets = [str(bet) for bet in [0, 1, 2, 5, 25, 100, 500]]
+        self.available_bets = [str(bet) for bet in [1, 2, 5, 25, 100, 500]]
         self.seats = {}  # create a dictionary to keep track of the seats
         self.betting_event = None
         self.waiting_players_to_join = None  # Initialized later
