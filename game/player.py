@@ -9,7 +9,8 @@ from game.state import PlayerState
 class Player:
     id_counter = 0
 
-    def __init__(self, logger=logging.Logger, name='Dealer', balance=0, id=None, origin_player_id=None, bet=0, initial_bet=0,
+    def __init__(self, logger=logging.Logger, name='Dealer', balance=0, id=None, origin_player_id=None, bet=0,
+                 initial_bet=0,
                  state=PlayerState.WAIT_FOR_BET,
                  websocket: WebSocket = None):
         self.logger = logger

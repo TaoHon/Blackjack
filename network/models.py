@@ -14,6 +14,7 @@ class RequestPlayerAction(BaseModel):
     state: str
     table: list
     balance: float
+    score: int
     available_actions: list
 
     # Add more fields as needed
