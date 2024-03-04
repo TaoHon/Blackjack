@@ -548,10 +548,6 @@ class TestGameManagerRestFunctions(unittest.TestCase):
         self.game_manager.add_player(self.player)
         self.game_manager.player_manager.add_player.assert_called_once_with(self.player)
 
-    def test_reshuffle_deck(self):
-        self.game_manager.reshuffle_deck()
-        self.game_manager.deck.shuffle_if_needed.assert_called_once()
-
     def test_find_original_player(self):
         # Setup
         original_player = MagicMock()

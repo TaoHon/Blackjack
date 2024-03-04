@@ -33,6 +33,8 @@ class EventHandler:
 
     def start_betting(self):
         self.ready_to_start.set()
+        if self.game_manager.deck.need_shuffle:
+            self.game_manager.deck.shuffle()
         self.logger.info("Starting betting")
 
     def start_dealing_cards(self):

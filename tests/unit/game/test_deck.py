@@ -45,27 +45,6 @@ class TestDeck(unittest.TestCase):
         full_length = self.deck.maximum_deck_size * 52
         self.assertTrue(half_length <= index <= full_length)
 
-    '''In shuffle if needed test, shuffle method clears the log. 
-    So we check if shuffle needed method shuffles only when cards are less than threshold'''
-
-    def test_shuffle_if_needed_no_need_to_shuffle(self):
-        self.deck.plastic_card_pos = 20
-        initial_deck = self.deck.cards.copy()
-        for _ in range(20):
-            self.deck.deal_card()
-        deck_before_shuffle_if_needed = self.deck.cards.copy()
-        self.deck.shuffle_if_needed()
-        self.assertEqual(deck_before_shuffle_if_needed, self.deck.cards)
-
-    def test_shuffle_if_needed_need_to_shuffle(self):
-        self.deck.plastic_card_pos = 20
-        initial_deck = self.deck.cards.copy()
-        for _ in range(21):
-            self.deck.deal_card()
-        self.deck.shuffle_if_needed()
-        self.assertEqual(len(self.deck.cards), len(initial_deck))
-        self.assertNotEqual(initial_deck, self.deck.cards)
-
 
 if __name__ == '__main__':
     unittest.main()

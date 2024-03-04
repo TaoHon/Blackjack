@@ -32,8 +32,6 @@ class GameManager:
                     continue  # If so, don't deal cards to this player
                 player.hit(self.deck)
 
-        self.reshuffle_deck()
-
     def add_player(self, player):
         self.player_manager.add_player(player)
 
@@ -55,9 +53,6 @@ class GameManager:
         else:
             self.logger.error(f"Player with id {player_id} not found.")
         return False
-
-    def reshuffle_deck(self):
-        self.deck.shuffle_if_needed()
 
     def player_turn(self, player):
         self.logger.info(f"Current score: {player.score}")

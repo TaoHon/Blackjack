@@ -16,6 +16,7 @@ class RequestPlayerAction(BaseModel):
     balance: float
     score: int
     available_actions: list
+    need_shuffle: bool
 
     # Add more fields as needed
 

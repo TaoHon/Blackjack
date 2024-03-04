@@ -33,9 +33,14 @@ class Deck:
         half_length = self.maximum_deck_size // 2  # Integer division to get half-length of cards
         full_length = self.maximum_deck_size * 52
 
-        return random.randint(half_length, full_length)
+        return random.randint(half_length - half_length // 4, half_length + half_length // 4)
 
     def shuffle_if_needed(self):
         if len(self.cards) < (self.maximum_deck_size - self.plastic_card_pos):
             self.shuffle()
             self.logger.info("Shuffled")
+
+    def need_shuffle(self):
+        if len(self.cards) < (self.maximum_deck_size - self.plastic_card_pos):
+            return True
+        return False

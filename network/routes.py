@@ -81,6 +81,7 @@ async def handle_betting_state(player, game_manager, connection_manager, event_h
                                          table=[], balance=player.balance,
                                          available_actions=available_bets,
                                          score=player.score,
+                                         need_shuffle=game_manager.deck.need_shuffle(),
                                          seat=game_manager.player_manager.get_seat_number(player.id))
     await connection_manager.send_personal_message(request_action.model_dump_json(), websocket)
     data = await websocket.receive_text()
@@ -122,6 +123,7 @@ async def handle_player_turn_state(player, game_manager, connection_manager, web
                                          table=table_state,
                                          available_actions=actions, balance=player.balance,
                                          score=player.score,
+                                         need_shuffle=game_manager.deck.need_shuffle(),
                                          seat=game_manager.player_manager.get_seat_number(player.id))
     logger.debug(f'Requesting action: {request_action}')
 
@@ -156,6 +158,7 @@ async def handle_publish_result_state(player, game_manager, connection_manager, 
                                          table=table_state,
                                          balance=player.balance, available_actions=[],
                                          score=player.score,
+                                         need_shuffle=game_manager.deck.need_shuffle(),
                                          seat=game_manager.player_manager.get_seat_number(player.id))
     await connection_manager.send_personal_message(request_action.model_dump_json(), websocket)
 
