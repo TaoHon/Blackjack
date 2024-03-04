@@ -65,8 +65,8 @@ class GameManager:
         actions = ["Hit (h)", "Stand (s)"]
         if player.double_down_allowed():
             actions.append("Double Down (d)")
-        # if player.split_allowed(self.player_manager.count_split_players(player)):
-        #     actions.append("Split (p)")
+        if player.split_allowed(self.player_manager.count_split_players(player)):
+            actions.append("Split (p)")
         if player.insurance_allowed(self.dealer):  # Assuming a flag to track if insurance is taken
             actions.append("Insurance (i)")
 
