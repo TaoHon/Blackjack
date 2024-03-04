@@ -3,15 +3,38 @@
 <head>
     <meta charset="UTF-8">
     <title>Game Results</title>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+        }
+
+        #chartContainer, #winRateContainer {
+            width: 100%;
+            max-height: 80vh;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        canvas {
+            display: block;
+            width: 100% !important;
+            height: auto !important;
+        }
+    </style>
 </head>
 <body>
-    <h1>Game Results Diagram</h1>
-    <!-- Update this div to include a canvas element -->
-    <canvas id="resultsDiagram" width="400" height="400"></canvas>
+<h1>Game Results Diagram</h1>
+<div id="chartContainer">
+    <canvas id="resultsDiagram"></canvas>
+</div>
+<h2>Win Rate Diagram</h2>
+<div id="winRateContainer">
+    <canvas id="winRateDiagram"></canvas>
+</div>
 
-    <!-- Ensure Chart.js is loaded before your custom script -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <!-- Link to your external JS file that contains WebSocket logic and chart updates -->
-    <script src="result.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="result.js"></script>
 </body>
 </html>

@@ -14,7 +14,6 @@ class Deck:
     def _create_deck(self):
         # Create multiple decks of cards
         cards = [suit * 100 + value for suit in range(1, 5) for value in range(1, 14)] * self.num_decks
-        # cards = [suit * 100 + 10 for suit in range(1, 5)] * 48
 
         return cards
 
@@ -40,5 +39,3 @@ class Deck:
         if len(self.cards) < (self.maximum_deck_size - self.plastic_card_pos):
             self.shuffle()
             self.logger.info("Shuffled")
-        else:
-            self.logger.info("No need to shuffle")

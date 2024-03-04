@@ -18,7 +18,7 @@ from config import get_game_manager, get_event_bus, get_state_machine, \
 from utils.event_bus import EventBus
 
 router = APIRouter()
-logger = utils.log_setup.setup_logger(name=__name__, log_level=logging.DEBUG)
+logger = utils.log_setup.setup_logger(name=__name__, log_level=logging.WARN)
 
 
 @router.websocket("/ws/result/publish_results")
@@ -51,7 +51,7 @@ async def websocket_endpoint(websocket: WebSocket, client_name: str,
     client_id = str(uuid.uuid4())
 
     # Create a new player and add to the game
-    player = Player(name=client_name, id=client_id, websocket=websocket, balance=1000)
+    player = Player(logger=logger, name=client_name, id=client_id, websocket=websocket, balance=1000)
     game_manager.player_manager.add_player(player)
 
     while True:

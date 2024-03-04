@@ -10,7 +10,7 @@ import utils.log_setup
 
 event_bus = EventBus()
 
-logger = utils.log_setup.setup_logger(log_level=logging.DEBUG, name=__name__)
+logger = utils.log_setup.setup_logger(log_level=logging.WARN, name=__name__)
 
 player_manager = PlayerManager(num_seats=1, event_bus=event_bus, logger=logger)
 

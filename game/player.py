@@ -1,4 +1,5 @@
 import logging
+from collections import deque
 
 import utils.log_setup
 from fastapi import WebSocket
@@ -28,8 +29,9 @@ class Player:
         self.websocket = websocket
         self.has_double_down = False
         self.initial_bet = initial_bet
-
-        self.logger = utils.log_setup.setup_logger(name=__name__)
+        self.result_history = deque([0] * 10, maxlen=10)
+        
+        self.logger = utils.log_setup.setup_logger(name=__name__, log_level=logging.WARN)
 
     def transition_state(self, new_state):
         """Transition to a new state and call the corresponding method."""
