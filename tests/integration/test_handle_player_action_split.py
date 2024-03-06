@@ -22,12 +22,10 @@ class TestHandlePlayerActionSplit(unittest.TestCase):
         self.event_handler = EventHandler(event_bus=self.event_bus, logger=self.logger, game_manager=self.game_manager)
 
     def test_determine_winners_player_split(self):
-        # Preparing the deck with a specific card to ensure predictable outcomes
-        self.game_manager.deck.cards = [110] * 50
-
         # Adding a test player to the game
         player = Player(name='TestUser', id=21, websocket=None, balance=1000)
         self.game_manager.add_player(player)
+        self.game_manager.deck.cards = [110] * 50
 
         # Placing a bet for the player and verifying the bet was recorded correctly
         self.game_manager.place_bet(player.id, 100)

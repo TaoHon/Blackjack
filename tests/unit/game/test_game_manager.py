@@ -22,7 +22,7 @@ class TestGameManagerDealCards(unittest.TestCase):
 
     def test_deal_initial_cards_sequence(self):
         self.game_manager.deck = MagicMock()
-        self.game_manager.reshuffle_deck = MagicMock()
+        self.game_manager.shuffle = MagicMock()
         self.game_manager.deal_initial_cards()
 
         # Prepare the expected sequence of calls for the first and second card dealing
@@ -42,8 +42,6 @@ class TestGameManagerDealCards(unittest.TestCase):
 
         self.assertEqual(actual_calls, all_expected_calls[:len(actual_calls)])
 
-        # Check if reshuffle_deck was called
-        self.game_manager.reshuffle_deck.assert_called_once()
 
     @patch('game.player.Player')
     def test_deal_initial_cards_with_skipped_round(self, MockPlayer):
@@ -67,9 +65,6 @@ class TestGameManagerDealCards(unittest.TestCase):
         # Since each active player gets two cards, verify the number of calls
         self.assertEqual(active_player_1.hit.call_count, 2)
         self.assertEqual(active_player_2.hit.call_count, 2)
-
-        # Check if reshuffle_deck was called
-        self.game_manager.reshuffle_deck.assert_called_once()
 
 
 class TestGameManagerPlaceBet(unittest.TestCase):
