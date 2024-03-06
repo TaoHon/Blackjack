@@ -43,7 +43,7 @@ class TestDeck(unittest.TestCase):
         index = self.deck.random_plastic_card_index()
         half_length = self.deck.maximum_deck_size // 2
         full_length = self.deck.maximum_deck_size * 52
-        self.assertTrue(half_length <= index <= full_length)
+        self.assertTrue(half_length - half_length // 4 <= index <= half_length + half_length // 4)
 
 
 if __name__ == '__main__':

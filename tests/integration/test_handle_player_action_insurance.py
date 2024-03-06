@@ -23,12 +23,11 @@ class TestHandlePlayerActionInsurance(unittest.TestCase):
 
     def test_handle_player_action_take_insurance_dealer_blackjack(self):
         # Preparing the deck with a specific card to ensure predictable outcomes
-        self.game_manager.deck.cards = [110, 102, 101, 103]
 
         # Adding a test player to the game
         player = Player(name='TestUser', id=21, websocket=None, balance=1000)
         self.game_manager.add_player(player)
-
+        self.game_manager.deck.cards = [110, 102, 101, 103]
         # Placing a bet for the player and verifying the bet was recorded correctly
         self.game_manager.place_bet(player.id, 100)
         self.assertEqual(player.initial_bet, 100)
@@ -65,12 +64,11 @@ class TestHandlePlayerActionInsurance(unittest.TestCase):
 
     def test_handle_player_action_take_insurance_dealer_win(self):
         # Preparing the deck with a specific card to ensure predictable outcomes
-        self.game_manager.deck.cards = [109, 102, 101, 103]
 
         # Adding a test player to the game
         player = Player(name='TestUser', id=21, websocket=None, balance=1000)
         self.game_manager.add_player(player)
-
+        self.game_manager.deck.cards = [109, 102, 101, 103]
         # Placing a bet for the player and verifying the bet was recorded correctly
         self.game_manager.place_bet(player.id, 100)
         self.assertEqual(player.initial_bet, 100)
