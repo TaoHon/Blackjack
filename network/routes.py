@@ -135,7 +135,7 @@ async def handle_player_turn_state(player, game_manager, connection_manager, web
 
     try:
         json_data = PlayerAction.model_validate_json(data)
-        if json_data.player_name == player.name:
+        if json_data.player_name == player.name or json_data.player_name == player.name.replace(" (Split)", ""):
             game_manager.handle_action(json_data.action, player)
             player = origin_player
         else:
