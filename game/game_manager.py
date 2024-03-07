@@ -149,6 +149,7 @@ class GameManager:
         self.dealer.reset()
         self.round_counter = self.round_counter + 1
         self.logger.info("Cleaning up done")
+        self.deck.shuffle_if_needed()
 
     def get_table_state_array(self, hidden_card=False):
         # Initialize the table state with the dealer's hand
